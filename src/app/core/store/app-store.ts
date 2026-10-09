@@ -136,6 +136,24 @@ export class AppStore {
     }
   }
 
+  /**
+   * Data-key recovery: the proxy renames the unreadable database and opens a new one. Everything
+   * held in memory belonged to the old database, so hydration and the configuration start over.
+   */
+  async resetStorage(): Promise<{ backupFile: string | null }> {
+    const result = await this.#proxy.post<{ backupFile: string | null }>('/api/storage/reset', {
+      confirm: 'RESET',
+    });
+    this.#hydratedKeys.clear();
+    this.#state.update((s) => ({
+      ...s,
+      config: { status: 'idle', config: null, error: null },
+      datasets: {},
+    }));
+    await this.loadConfig();
+    return result;
+  }
+
   /** `PUT /api/config`; the store keeps the normalized document the proxy returns. */
   async saveConfig(config: AppConfig): Promise<{ movedKeys: string[] }> {
     const saved = await this.#proxy.put<{ config: AppConfig; movedKeys: string[] }>(

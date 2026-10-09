@@ -27,6 +27,7 @@ export function registerConnectionRoutes(router) {
     if (info?.deploymentType !== 'Cloud') {
       throw new ApiError(422, ERROR_CODES.NOT_CLOUD, 'Solo se admite Jira Cloud.');
     }
+    deps.verifiedOrigins?.record(url.origin);
     return { deploymentType: info.deploymentType, baseUrl: url.origin };
   });
 

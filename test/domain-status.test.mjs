@@ -84,3 +84,10 @@ test('isStale: closed work is never stale, overrides apply', () => {
   assert.equal(isStale(row(), config({ 10: 'done' }), { now, timeZone: BA }), false);
   assert.equal(isStale(row({ statusCategory: 'done' }), config({ 10: 'todo' }), { now, timeZone: BA }), true);
 });
+
+test('effectiveCategory ignores inherited properties of the overrides object', () => {
+  for (const statusId of ['toString', 'constructor', '__proto__', 'hasOwnProperty']) {
+    assert.equal(effectiveCategory(row({ statusId }), config()), 'doing', statusId);
+  }
+  assert.equal(effectiveCategory(row({ statusId: 'toString' }), config({ toString: 'done' })), 'done');
+});

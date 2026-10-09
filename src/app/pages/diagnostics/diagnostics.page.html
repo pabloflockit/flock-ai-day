@@ -19,6 +19,30 @@
   <button type="button" (click)="recheck()">Verificar de nuevo</button>
 </section>
 
+@if (dataKeyInvalid()) {
+  <section>
+    <h2>Base local ilegible</h2>
+    <p role="alert">
+      La clave de datos no puede descifrar la base local. Podés crear una base nueva: la actual no
+      se borra, se conserva con otro nombre (.bak) en la misma carpeta.
+    </p>
+    <button type="button" [disabled]="reset().status === 'loading'" (click)="resetStorage()">
+      Crear base nueva
+    </button>
+    @if (reset().error; as e) {
+      <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+    }
+  </section>
+}
+@if (resetResult(); as result) {
+  <p>
+    Se creó una base nueva.
+    @if (result.backupFile) {
+      La anterior se conservó como {{ result.backupFile }}.
+    }
+  </p>
+}
+
 <section>
   <h2>Conexión con Jira</h2>
   @if (configState().status === 'error') {

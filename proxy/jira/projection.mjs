@@ -140,11 +140,13 @@ export function projectIssue(raw, { issueTypesById, statusesById, measureFieldId
   const issueTypeId = String(embeddedType.id ?? '');
   const type = issueTypesById.get(issueTypeId) ?? embeddedType;
   const subtaskFlag = type.subtask === true;
+  // Never defaulted to 0 (that would claim "standard issue"): without a level, -1 for a flagged
+  // subtask, else unknown.
   const hierarchyLevel = Number.isInteger(type.hierarchyLevel)
     ? type.hierarchyLevel
     : subtaskFlag
       ? -1
-      : 0; // only when neither /issuetype nor the embedded type carries a level
+      : null;
   // Strictly a Jira subtask: the type flag or level -1. Having a parent is not enough.
   const isSubtask = subtaskFlag || hierarchyLevel === -1;
 

@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 import { startTestProxy, withSecret } from './helpers.mjs';
 import { openDatabase } from '../proxy/cache/db.mjs';
 import { createConfigStore } from '../proxy/config/store.mjs';
+import { createVerifiedOrigins } from '../proxy/config/verified-origins.mjs';
 
 let proxy;
 let handle;
@@ -12,8 +13,12 @@ let key;
 before(async () => {
   key = randomBytes(32);
   handle = openDatabase({ path: ':memory:' });
+  // The URL check itself is covered in config-verified-origin.test.mjs.
+  const verifiedOrigins = createVerifiedOrigins();
+  verifiedOrigins.record('https://acme.atlassian.net');
   proxy = await startTestProxy({
     stores: { config: createConfigStore({ handle, getDataKey: () => key }) },
+    verifiedOrigins,
   });
 });
 after(() => proxy.close());

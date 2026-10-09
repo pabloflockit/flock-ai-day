@@ -1,4 +1,6 @@
 import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
+import { validateJiraUrl } from '../../shared/jira-url.mjs';
+import { normalizeConfig } from '../config/normalize.mjs';
 import { projectIssuesParams, resolveTarget } from '../../shared/cache-key.mjs';
 
 /** @param {any} deps */
@@ -39,6 +41,28 @@ export function computeMovedKeys(previous, edited) {
 }
 
 /**
+ * A `jira.baseUrl` that differs from the stored one must have been verified as Cloud by this
+ * proxy process (architecture 4.4). An empty or invalid value is not checked here: the config
+ * validation accepts the former and rejects the latter.
+ *
+ * @param {string} stored
+ * @param {string} next
+ * @param {any} deps
+ */
+function requireVerifiedBaseUrl(stored, next, deps) {
+  const target = validateJiraUrl(next);
+  if (!target.ok) return;
+  const current = validateJiraUrl(stored);
+  if (current.ok && current.origin === target.origin) return;
+  if (deps.verifiedOrigins?.has(target.origin)) return;
+  throw new ApiError(
+    422,
+    ERROR_CODES.URL_NOT_VERIFIED,
+    'La URL de Jira no fue verificada como Jira Cloud. Verificala antes de guardarla.',
+  );
+}
+
+/**
  * @param {ReturnType<import('../router.mjs').createRouter>} router
  */
 export function registerConfigRoutes(router) {
@@ -50,6 +74,7 @@ export function registerConfigRoutes(router) {
       throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'The body must be a JSON object.');
     }
     const previous = store.load(); // also surfaces DATA_KEY_INVALID before anything is written
+    requireVerifiedBaseUrl(previous.jira.baseUrl, normalizeConfig(body).jira.baseUrl, deps);
     const config = store.save(body);
     return { config, movedKeys: computeMovedKeys(previous, config) };
   });

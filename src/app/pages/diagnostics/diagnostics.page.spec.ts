@@ -1,6 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { ProxyClient } from '../../core/proxy-client';
+import { ProxyClient, ProxyError } from '../../core/proxy-client';
 import { DiagnosticsPage } from './diagnostics.page';
 
 const config = {
@@ -36,11 +36,11 @@ const dataset = {
 describe('DiagnosticsPage', () => {
   const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
 
-  function setup() {
+  function setup(configGet?: () => Promise<unknown>) {
     const proxy = {
       health: () => Promise.resolve({ status: 'ok', version: '1.0.0' }),
       get: jasmine.createSpy('get').and.callFake((path: string) => {
-        if (path === '/api/config') return Promise.resolve(config);
+        if (path === '/api/config') return configGet ? configGet() : Promise.resolve(config);
         if (path.startsWith('/api/jira/epics/')) {
           return Promise.resolve({ key: 'X-9', summary: 'Épica de prueba' });
         }
@@ -123,6 +123,58 @@ describe('DiagnosticsPage', () => {
     expect(page.token()).toBe('');
     expect((el.querySelector('#jira-token') as HTMLInputElement).value).toBe('');
     expect(el.innerHTML).not.toContain('super-secret-token');
+  });
+
+  describe('data key recovery', () => {
+    const keyInvalid = () => Promise.reject(new ProxyError('DATA_KEY_INVALID', 'No se pudo descifrar la base local.'));
+    const createButton = (el: HTMLElement) =>
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes('Crear base nueva'));
+
+    it('offers "Crear base nueva" only for DATA_KEY_INVALID', async () => {
+      const ok = setup();
+      await flush();
+      ok.fixture.detectChanges();
+      expect(createButton(ok.el)).toBeUndefined();
+
+      TestBed.resetTestingModule();
+      const otherError = setup(() => Promise.reject(new ProxyError('UNKNOWN', 'boom')));
+      await flush();
+      otherError.fixture.detectChanges();
+      expect(otherError.el.textContent).toContain('código: UNKNOWN');
+      expect(createButton(otherError.el)).toBeUndefined();
+
+      TestBed.resetTestingModule();
+      const bad = setup(keyInvalid);
+      await flush();
+      bad.fixture.detectChanges();
+      expect(createButton(bad.el)).toBeDefined();
+      expect(bad.el.textContent).toContain('se conserva');
+    });
+
+    it('asks for confirmation, then resets the storage and reloads the configuration', async () => {
+      const { fixture, page, proxy, el } = setup(keyInvalid);
+      await flush();
+      fixture.detectChanges();
+
+      const confirmSpy = spyOn(window, 'confirm').and.returnValue(false);
+      createButton(el)!.click();
+      await flush();
+      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(proxy.post).not.toHaveBeenCalledWith('/api/storage/reset', jasmine.anything());
+
+      confirmSpy.and.returnValue(true);
+      proxy.post.and.resolveTo({ backupFile: 'leadership-panel.db.bak-2026' });
+      proxy.get.and.resolveTo(config);
+      createButton(el)!.click();
+      await flush();
+      fixture.detectChanges();
+
+      expect(proxy.post).toHaveBeenCalledWith('/api/storage/reset', { confirm: 'RESET' });
+      expect(page.resetResult()?.backupFile).toBe('leadership-panel.db.bak-2026');
+      expect(page.config()).not.toBeNull();
+      expect(createButton(el)).toBeUndefined();
+      expect(el.textContent).toContain('leadership-panel.db.bak-2026');
+    });
   });
 
   it('only allows saving the connection after the URL was verified', async () => {

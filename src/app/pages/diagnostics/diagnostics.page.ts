@@ -26,6 +26,7 @@ interface Op<T> {
 
 const idle = <T>(): Op<T> => ({ status: 'idle', data: null, error: null });
 
+const DATA_KEY_INVALID = 'DATA_KEY_INVALID';
 const CATEGORY_LABEL = { todo: 'Por hacer', doing: 'En curso', done: 'Hecho' } as const;
 
 /** Runs `call`, publishing its progress in `target`. Never throws. */
@@ -80,6 +81,26 @@ export class DiagnosticsPage {
       this.verify().status === 'ok' &&
       this.verify().data?.baseUrl === this.baseUrl().trim(),
   );
+
+  // Data-key recovery (architecture 4.5).
+  readonly reset = signal<Op<{ backupFile: string | null }>>(idle());
+  readonly resetResult = computed(() => this.reset().data);
+  /** The "Crear base nueva" action is offered only while a visible error says the key cannot decrypt. */
+  readonly dataKeyInvalid = computed(() => {
+    const errors = [
+      this.configState().error,
+      this.verify().error,
+      this.saveConnection().error,
+      this.saveToken().error,
+      this.testConnection().error,
+      this.epicCheck().error,
+      this.datasetError(),
+    ];
+    return (
+      errors.some((e) => e?.code === DATA_KEY_INVALID) ||
+      this.failedShards().some((s) => s.code === DATA_KEY_INVALID)
+    );
+  });
 
   // Test epic block.
   readonly epicKey = signal('');
@@ -219,6 +240,21 @@ export class DiagnosticsPage {
       epicIssuesParams(key, config),
       this.mode(),
     );
+  }
+
+  async resetStorage(): Promise<void> {
+    // A plain confirm() for now; the design system modal arrives with flow 2.
+    const accepted = window.confirm(
+      'Se va a crear una base de datos nueva y vacía. La base actual no se borra: queda guardada con otro nombre (.bak) en la misma carpeta. ¿Continuar?',
+    );
+    if (!accepted) return;
+    const ok = await track(this.reset, () => this.#store.resetStorage());
+    if (ok) {
+      for (const op of [this.verify, this.saveConnection, this.saveToken, this.testConnection, this.epicCheck]) {
+        op.set(idle());
+      }
+      this.activeEpicKey.set(null);
+    }
   }
 
   async openInJira(issueKey: string): Promise<void> {

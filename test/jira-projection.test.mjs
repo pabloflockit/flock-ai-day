@@ -199,3 +199,20 @@ test('completeChangelogs: a failing per-issue fetch rejects (shard fails, never 
   const client = { issueChangelog: async () => { throw new Error('boom'); } };
   await assert.rejects(completeChangelogs({ client, issues: [{ key: 'A-1' }] }), /boom/);
 });
+
+test('missing hierarchyLevel is never defaulted to 0: -1 for a subtask flag, else null', () => {
+  const levels = new Map([
+    ['50', { id: '50', name: 'NoLevelTask', subtask: false }],
+    ['51', { id: '51', name: 'NoLevelSub', subtask: true }],
+  ]);
+  const project = (id) =>
+    projectIssue(raw({}, { issuetype: { id, name: 'X' } }), ctx({ issueTypesById: levels }));
+  const plain = project('50');
+  assert.equal(plain.hierarchyLevel, null);
+  assert.equal(plain.isSubtask, false);
+  const sub = project('51');
+  assert.equal(sub.hierarchyLevel, -1);
+  assert.equal(sub.isSubtask, true);
+  // unknown id, embedded type without level either
+  assert.equal(projectIssue(raw({}, { issuetype: { id: '99', name: 'Y' } }), ctx()).hierarchyLevel, null);
+});

@@ -18,7 +18,9 @@ import { businessDaysBetween } from './business-days.mjs';
  * @returns {StatusCategory}
  */
 export function effectiveCategory(row, config) {
-  return config.jira.statusCategoryOverrides[row.statusId] ?? row.statusCategory;
+  const overrides = config.jira.statusCategoryOverrides;
+  // Own keys only: a status id such as `toString` must not hit Object.prototype.
+  return Object.hasOwn(overrides, row.statusId) ? overrides[row.statusId] : row.statusCategory;
 }
 
 /** @param {Pick<IssueRow, 'statusId' | 'statusCategory'>} row @param {Pick<DomainConfig, 'jira'>} config */

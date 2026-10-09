@@ -6,6 +6,7 @@ const MESSAGES: Record<string, string> = {
   NOT_FOUND: 'No se encontró el recurso pedido.',
   JIRA_NOT_CONFIGURED: 'Todavía no hay una URL de Jira configurada.',
   NOT_CLOUD: 'Solo se admite Jira Cloud.',
+  URL_NOT_VERIFIED: 'La URL de Jira todavía no fue verificada como Jira Cloud.',
   NOT_AN_EPIC: 'La issue indicada no es una épica.',
   AUTH: 'Jira rechazó las credenciales (email o token).',
   FORBIDDEN: 'Tu usuario no tiene permiso para ver este recurso en Jira.',

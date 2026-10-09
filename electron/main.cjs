@@ -129,6 +129,7 @@ async function startProxy(secrets, demo) {
     allowedOrigins: getAllowedOrigins({ dev: isDevMode() }),
     secrets,
     stores: { config: configStore, datasets },
+    storage: { handle },
     fetch: guardedFetch,
     jira,
   });

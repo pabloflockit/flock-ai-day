@@ -42,6 +42,7 @@ export const ERROR_CODES = Object.freeze({
   JIRA_NOT_CONFIGURED: 'JIRA_NOT_CONFIGURED',
   NOT_CLOUD: 'NOT_CLOUD',
   NOT_AN_EPIC: 'NOT_AN_EPIC',
+  URL_NOT_VERIFIED: 'URL_NOT_VERIFIED',
 });
 
 /**
@@ -90,7 +91,7 @@ export function errorEnvelope(code, message, details) {
  *   key: string,
  *   issueTypeId: string,
  *   issueTypeName: string,
- *   hierarchyLevel: number,
+ *   hierarchyLevel: number | null,
  *   isSubtask: boolean,
  *   summary: string,
  *   parentKey: string | null,
