@@ -34,6 +34,10 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 - AI narrative (headlines, sprint reading): only available when the AI key is stored (and AI is enabled in
   settings); the model only drafts, figures come from the deterministic model and are checked.
 
+- Report figures (user, 2026-10-09): an item "has movement" when it has at least one status transition inside
+  [start, end] (inclusive days); "closed" = its last transition into a Done-category status (status overrides
+  applied) falls inside the period; "blocked" = its current status is in a CONFIGURABLE list of blocked statuses.
+
 ## Draft tasks (deterministic first)
 
 - [x] 1. `IssueRow` gets `statusChanges` (transition history from the changelog) and `components` (`{ id, name }[]`):
@@ -46,8 +50,10 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       "<since>"` with changelog; epic resolved from the parent (subtasks via their parent, missing parents fetched
       with a batched `key in (...)`); the dataset is ALL member work, the report model (task 4) leaves out the team's
       active epics like `scope.mjs`; one shard, delta + degradation like `projectIssues`; demo answers the new JQL.
-- [ ] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
+- [x] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
       hygiene notes, outside-epics section (test-first).
+- [ ] 4b. Blocked statuses: `jira.blockedStatusIds` in the config (normalize, validate, does not move cache keys) and
+      a picker in Conexión -> Particularidades.
 - [ ] 5. HTML template with the Flock design tokens, date-range picker, preview, `saveHtml` bridge (validated in main).
 - [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
 - [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
@@ -92,3 +98,14 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   DEMO-28 (no epic). Docs: `docs/architecture.md` §7, `docs/plan.md` §2.3. RED observed (missing module, route 400s,
   demo clauses). node 503/503, `build:desktop` OK; Karma not run (no front change).
   Membership is by CURRENT assignee (an issue reassigned away from a member is not in the dataset).
+  Commit: `feat(jira): add the memberIssues dataset for the sprint report` (3cf0c5e).
+- Task 4 (parent, inline, same subagent incident): `shared/domain/sprint-close.mjs` `buildSprintClose({ teamId, config,
+  period, timeZone, statuses, blockedStatusIds, epicRows, memberRows })` -> `{ period, kpis, layers, outside, hygiene }`.
+  Transition categories from the `/api/jira/statuses` catalog with the overrides applied; layers via
+  `layersOf(row, componentLayers)`; in-epic scope = the team's active epics, ALL assignees (the team's epics are the
+  team's work); outside = member rows with movement whose epic is not a team active epic, grouped by epic, no layers,
+  unknown parents shown as a ref. without item. Hygiene: `multiple_layers`, `parent_open_all_subtasks_done`,
+  `subtask_open_under_done_parent` (over the items the report shows). RED observed (missing module); 11 tests,
+  node 514/514. Demo end-to-end check (script in %TEMP%/flock-verify, outside the repo): 16 moved items, FE 2, BE 2,
+  Sin capa 12, outside DEMO-25 (DEMO-26 ref + DEMO-27) and DEMO-28; no hygiene notes in the demo yet (task 6).
+  Commit: `feat(domain): build the layered sprint close model`.
