@@ -80,7 +80,7 @@ function inPeriod(at, { from, to, timeZone }) {
  * @param {Period & { timeZone: string }} period
  */
 export function movedInPeriod(row, period) {
-  return row.statusChanges.some((change) => inPeriod(change.at, period));
+  return (row.statusChanges ?? []).some((change) => inPeriod(change.at, period));
 }
 
 /**
@@ -91,7 +91,7 @@ export function movedInPeriod(row, period) {
  */
 export function layersOf(row, componentLayers) {
   const projectKey = projectKeyOf(row.key);
-  const ids = new Set(row.components.map((c) => c.id));
+  const ids = new Set((row.components ?? []).map((c) => c.id));
   const found = new Set(
     componentLayers.filter((m) => m.projectKey === projectKey && ids.has(m.componentId)).map((m) => m.layer),
   );
@@ -132,7 +132,9 @@ export function buildSprintClose(input) {
 
   /** @param {IssueRow} row @returns {ItemView} */
   function view(row) {
-    const lastDone = [...row.statusChanges].reverse().find((c) => categoryOf(c.toStatusId, row) === 'done');
+    // Rows cached before PAYLOAD_VERSION 2 lack `statusChanges`: treated as no movement.
+    const changes = row.statusChanges ?? [];
+    const lastDone = [...changes].reverse().find((c) => categoryOf(c.toStatusId, row) === 'done');
     return {
       key: row.key,
       summary: row.summary,
@@ -146,7 +148,7 @@ export function buildSprintClose(input) {
       moved: movedInPeriod(row, window),
       closedInPeriod: lastDone !== undefined && inPeriod(lastDone.at, window),
       blocked: blocked.has(row.statusId),
-      periodChanges: row.statusChanges
+      periodChanges: changes
         .filter((c) => inPeriod(c.at, window))
         .map((c) => ({
           at: c.at,

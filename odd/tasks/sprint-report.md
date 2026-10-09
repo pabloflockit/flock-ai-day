@@ -56,7 +56,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       a picker in Conexión -> Particularidades.
 - [x] 5a. Pure HTML renderer (`renderSprintCloseHtml`, Flock tokens, escaped, no scripts) + `saveHtml` bridge
       (validated in main, `.html` only).
-- [ ] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
+- [x] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
 - [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
 - [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
       plan §8.2.
@@ -123,3 +123,16 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   was not read; no real data in the repo. RED observed for the renderer (bridge tests written after the code).
   node 547/547, Karma 178/178, `build:desktop` OK.
   Commit: `feat(reports): render the sprint close as standalone HTML`.
+- Task 5b (worker): page "Cierre de sprint" (`/sprint-close`, nav after Dashboard; user chose a page over the reports
+  modal). Own team select (there is no shared sidebar team selection; first active team by default), Desde/Hasta
+  (default last 14 days, browser time zone like the dashboard), KPIs, dataset warnings, statuses catalog (failure
+  tolerated), no-layer-mapping hint, preview = sandboxed `<iframe sandbox="" srcdoc>` of the exact exported HTML,
+  "Exportar HTML" via `saveHtml`. Store: `memberIssues` source keyed by `since`, `refreshProjectIssues`.
+  Demo smoke (verifier, CDP, screenshots in %TEMP%/flock-smoke): after a full sync 14 moved items (10/4, 6 closed),
+  2 outside (DEMO-25), preview OK, invalid range message OK, 0 console errors. BUG found: project rows cached
+  before 737ab11 lack `statusChanges`/`components` -> `buildSprintClose` threw and the page was blank, and
+  "Actualizar datos" only refreshed member rows. Fix: the model tolerates missing arrays, "Actualizar datos" also
+  refreshes the team's projects (the proxy upgrades the payload-version mismatch to a full load) and a warning
+  asks to refresh when legacy rows are present. RED observed (domain TypeError; store compile error). node
+  548/548, Karma 194/194, `build:desktop` OK. Not smoked: saving the exported file, switching teams.
+  Commit: `feat(reports): add the sprint close page`.

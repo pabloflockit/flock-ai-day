@@ -1,0 +1,103 @@
+<header class="page-header">
+  <h1>Cierre de sprint</h1>
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+} @else if (configState().status === 'ready') {
+  @if (!team()) {
+    <div class="card empty">
+      <p>Elegí un equipo para armar el cierre de sprint.</p>
+      <div><a routerLink="/teams">Ir a Equipos</a></div>
+    </div>
+  } @else {
+    <div class="filter-bar">
+      <label class="field">
+        Equipo
+        <select [value]="teamId()" (change)="selectTeam($any($event.target).value)">
+          @for (t of teams(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === teamId()">{{ t.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        Desde
+        <input type="date" class="from" [value]="from()" (input)="from.set($any($event.target).value)" />
+      </label>
+      <label class="field">
+        Hasta
+        <input type="date" class="to" [value]="to()" (input)="to.set($any($event.target).value)" />
+      </label>
+      <button type="button" class="btn-ghost refresh" [disabled]="!!periodError() || refreshing()" (click)="refresh()">
+        Actualizar datos
+      </button>
+      <button
+        type="button"
+        class="export"
+        [disabled]="!canExport || !html()"
+        [attr.title]="canExport ? null : 'Exportar solo está disponible en la app de escritorio.'"
+        (click)="exportHtml()"
+      >
+        Exportar HTML
+      </button>
+    </div>
+
+    @if (periodError(); as message) {
+      <p class="field-error period-error" role="alert">{{ message }}</p>
+    }
+    @if (feedback(); as f) {
+      <p [class]="f.ok ? 'field-hint' : 'field-error'" [attr.role]="f.ok ? 'status' : 'alert'">{{ f.message }}</p>
+    }
+
+    <section class="card notes">
+      @if (dataAsOf(); as asOf) {
+        <p class="field-hint">Datos al {{ asOf | instant }}</p>
+      }
+      @if (notCurrent()) {
+        <p class="field-hint">Algunos datos no están al día: la última actualización falló o cambió la configuración.</p>
+      }
+      @if (legacyRows()) {
+        <p class="field-hint" role="status">
+          Algunos datos son de una versión anterior de la app: tocá «Actualizar datos» para recargarlos.
+        </p>
+      }
+      @if (missingProjects().length > 0 || memberNeverSynced()) {
+        <p class="field-hint" role="status">
+          Faltan datos: usá «Actualizar datos» o sincronizá desde <a routerLink="/sync">Sincronización</a>.
+        </p>
+      }
+      @for (item of datasetErrors(); track item.name) {
+        <p class="field-error" role="alert">{{ item.name }}: {{ item.message }}</p>
+      }
+      @if (statusesError(); as message) {
+        <p class="field-hint statuses-error" role="status">
+          No se pudo cargar el catálogo de estados ({{ message }}); el informe usa los nombres de estado de cada ítem.
+        </p>
+      }
+      @if (noLayerMapping()) {
+        <p class="field-hint layer-hint" role="status">
+          Todavía no mapeaste componentes a capas: todo va a 'Sin capa'. Configuralo en
+          <a routerLink="/connection">Conexión → Particularidades</a>.
+        </p>
+      }
+      @if (loading() || refreshing()) {
+        <p class="field-hint" role="status">Cargando datos…</p>
+      }
+    </section>
+
+    @if (report(); as r) {
+      <section class="kpis" aria-label="Resumen">
+        <div class="kpi"><span class="kpi-value">{{ r.kpis.withMovement }}</span><span class="kpi-label">Con movimiento</span></div>
+        <div class="kpi"><span class="kpi-value">{{ r.kpis.primaries }}</span><span class="kpi-label">Primarias</span></div>
+        <div class="kpi"><span class="kpi-value">{{ r.kpis.secondaries }}</span><span class="kpi-label">Secundarias</span></div>
+        <div class="kpi"><span class="kpi-value">{{ r.kpis.closed }}</span><span class="kpi-label">Cerradas</span></div>
+        <div class="kpi"><span class="kpi-value">{{ r.kpis.blocked }}</span><span class="kpi-label">Bloqueadas</span></div>
+      </section>
+      <p class="field-hint outside-count">Fuera de las épicas del equipo: {{ r.outside.kpis.withMovement }} con movimiento.</p>
+      <iframe class="preview" sandbox="" title="Vista previa del cierre de sprint" [srcdoc]="previewDoc()"></iframe>
+    }
+  }
+}

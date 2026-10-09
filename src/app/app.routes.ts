@@ -12,6 +12,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
   },
   {
+    path: 'sprint-close',
+    loadComponent: () =>
+      import('./pages/sprint-close/sprint-close.page').then((m) => m.SprintClosePage),
+  },
+  {
     path: 'diagnostics',
     loadComponent: () =>
       import('./pages/diagnostics/diagnostics.page').then((m) => m.DiagnosticsPage),

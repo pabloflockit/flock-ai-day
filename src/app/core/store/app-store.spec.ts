@@ -307,6 +307,27 @@ describe('AppStore projectIssues', () => {
     expect(store.projectIssues('p1')).toEqual(jasmine.objectContaining({ status: 'ready', fetchedAt: null, rows: [] }));
   });
 
+  it('refreshes a project delta and ignores an unknown project', async () => {
+    const get = jasmine.createSpy('get').and.resolveTo(config);
+    const post = jasmine
+      .createSpy('post')
+      .and.resolveTo({ rows: [{ key: 'P-1' } as never], fetchedAt: '2026-03-01T10:00:00.000Z', isCurrent: true, shardsMeta: [] });
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: { get, post } }],
+    });
+    const store = TestBed.inject(AppStore);
+    await store.loadConfig();
+
+    await store.refreshProjectIssues('nope');
+    expect(post).not.toHaveBeenCalled();
+    await store.refreshProjectIssues('p1');
+
+    const path = String(post.calls.mostRecent().args[0]);
+    expect(path).toContain('/api/datasets/projectIssues/refresh?scopeId=p1');
+    expect(path).toContain('mode=delta');
+    expect(store.projectIssues('p1').rows.map((r) => r.key)).toEqual(['P-1']);
+  });
+
   it('ignores an unknown project and does not call the proxy', async () => {
     const get = jasmine.createSpy('get').and.resolveTo(config);
     const store = setup(get);
@@ -314,5 +335,67 @@ describe('AppStore projectIssues', () => {
     store.ensureProjectIssues('nope');
     expect(get).toHaveBeenCalledTimes(1);
     expect(store.projectIssues('nope').status).toBe('idle');
+  });
+});
+
+describe('AppStore memberIssues', () => {
+  const config = normalizeConfig({
+    jira: { baseUrl: 'https://acme.atlassian.net', email: 'a@b.c' },
+    teams: [{ id: 't1', name: 'Alfa', active: true, members: [] }],
+    projects: [],
+  });
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
+  const view = (key: string) => ({
+    rows: [{ key } as never],
+    fetchedAt: '2026-03-01T10:00:00.000Z',
+    isCurrent: true,
+    shardsMeta: [],
+  });
+
+  function setup(proxy: Record<string, jasmine.Spy>) {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: proxy }],
+    });
+    return TestBed.inject(AppStore);
+  }
+
+  it('keeps one dataset per `since`, reading with the since query parameter', async () => {
+    const get = jasmine.createSpy('get').and.callFake((path: string) =>
+      Promise.resolve(path === '/api/config' ? config : view(path.includes('since=2026-03-01') ? 'A-1' : 'B-1')),
+    );
+    const store = setup({ get });
+    await store.loadConfig();
+
+    store.ensureMemberIssues('t1', '2026-03-01');
+    store.ensureMemberIssues('t1', '2026-03-01');
+    store.ensureMemberIssues('t1', '2026-03-10');
+    await flush();
+
+    expect(get).toHaveBeenCalledWith('/api/datasets/memberIssues?scopeId=t1&since=2026-03-01');
+    expect(get).toHaveBeenCalledWith('/api/datasets/memberIssues?scopeId=t1&since=2026-03-10');
+    expect(get.calls.allArgs().filter(([p]) => String(p).includes('/api/datasets')).length).toBe(2);
+    expect(store.memberIssues('t1', '2026-03-01').rows.map((r) => r.key)).toEqual(['A-1']);
+    expect(store.memberIssues('t1', '2026-03-10').rows.map((r) => r.key)).toEqual(['B-1']);
+    expect(store.memberIssues('t1', '2026-04-01').status).toBe('idle');
+  });
+
+  it('refreshes a delta with the since parameter', async () => {
+    const get = jasmine.createSpy('get').and.resolveTo(config);
+    const post = jasmine.createSpy('post').and.resolveTo(view('R-1'));
+    const store = setup({ get, post });
+    await store.loadConfig();
+
+    await store.refreshMemberIssues('t1', '2026-03-01');
+
+    expect(post).toHaveBeenCalledWith('/api/datasets/memberIssues/refresh?scopeId=t1&since=2026-03-01&mode=delta');
+    expect(store.memberIssues('t1', '2026-03-01').rows.map((r) => r.key)).toEqual(['R-1']);
+  });
+
+  it('ignores an unknown team', async () => {
+    const get = jasmine.createSpy('get').and.resolveTo(config);
+    const store = setup({ get });
+    await store.loadConfig();
+    store.ensureMemberIssues('nope', '2026-03-01');
+    expect(get).toHaveBeenCalledTimes(1);
   });
 });

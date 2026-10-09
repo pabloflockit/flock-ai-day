@@ -361,6 +361,8 @@ POST /api/reports/ai                 # solo si está habilitado; recibe métrica
 
 **Fuente `memberIssues` (informe de cierre).** El trabajo propio de los integrantes activos de un equipo desde el inicio del período: `assignee in (<integrantes>) AND updated >= "<since>"` con changelog (lotes de 50 integrantes). La épica sale del padre; una subtarea toma la de su padre, y si el padre no vino en el resultado se busca con `key in (...)` (sin changelog). El dataset es **todo** el trabajo de los integrantes: el modelo del informe separa lo que cae fuera de las épicas del equipo. Un solo shard (`members`) con delta, degradación y coalescencia iguales a `projectIssues`. Equipo inexistente o inactivo → 404; `since` ausente o inválido → 400 `VALIDATION_ERROR`. Se cuenta por el responsable **actual** de la issue.
 
+**Pantalla «Cierre de sprint» (`/sprint-close`).** Usa el equipo elegido en la propia página (por defecto el primero activo, igual que el dashboard) y un rango libre (`Desde`/`Hasta`, por defecto los últimos 14 días en la zona horaria local). El store hidrata `projectIssues` de los proyectos del equipo y `memberIssues` (clave por `since`, `ensureMemberIssues`/`refreshMemberIssues`; el cliente agrega `&since=` a la lectura y al refresh). `buildSprintClose` corre en un `computed()`, la vista previa es el HTML de `renderSprintCloseHtml` en un `<iframe sandbox="" srcdoc>` (sin scripts) y «Exportar HTML» usa `saveHtml` del puente de escritorio.
+
 `PUT /api/config` devuelve la lista de claves de cache que **cambiaron** por la edición, para que el front precaliente solo esas.
 
 ---

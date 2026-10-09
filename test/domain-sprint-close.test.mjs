@@ -254,3 +254,19 @@ test('inputs are not mutated and the result is deterministic', () => {
   assert.equal(JSON.stringify(epicRows), frozen);
   assert.deepEqual(a, b);
 });
+
+test('rows from an older payload (no statusChanges / components) do not throw and have no movement', () => {
+  const legacy = (key) => {
+    const r = row(key, { comps: ['1'] });
+    delete r.statusChanges;
+    delete r.components;
+    return r;
+  };
+  const opts = { ...PERIOD, timeZone: TZ };
+  assert.equal(movedInPeriod(legacy('A-10'), opts), false);
+  assert.deepEqual(layersOf(legacy('A-10'), COMPONENT_LAYERS), []);
+  const moved = row('A-11', { moves: [['2026-09-02T15:00:00.000Z', '1', '2']] });
+  const report = build({ epicRows: [legacy('A-10'), moved], memberRows: [legacy('M-1')] });
+  assert.equal(report.kpis.withMovement, 1);
+  assert.equal(report.outside.kpis.withMovement, 0);
+});

@@ -15,7 +15,10 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
     title: 'Panel',
-    items: [{ label: 'Dashboard', path: '/dashboard', icon: 'progress' }],
+    items: [
+      { label: 'Dashboard', path: '/dashboard', icon: 'progress' },
+      { label: 'Cierre de sprint', path: '/sprint-close', icon: 'check' },
+    ],
   },
   {
     title: 'Administración',

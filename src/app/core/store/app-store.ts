@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { IssueRow } from '../../../../shared/contracts.mjs';
-import { projectIssuesParams, resolveTarget, type Scope } from '../../../../shared/cache-key.mjs';
+import { memberIssuesParams, projectIssuesParams, resolveTarget, type Scope } from '../../../../shared/cache-key.mjs';
 import type { AppConfig } from '../../../../proxy/config/normalize.mjs';
 import { ProxyClient, ProxyError, TRANSPORT_ERROR } from '../proxy-client';
 
@@ -12,7 +12,7 @@ export interface ProxyHealthState {
   errorMessage: string | null;
 }
 
-export type DatasetSource = 'projectIssues' | 'epicIssues';
+export type DatasetSource = 'projectIssues' | 'epicIssues' | 'memberIssues';
 export type DatasetStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface ShardMeta {
@@ -99,6 +99,10 @@ const toStoreError = (error: unknown): StoreError =>
 
 /** The `scopeId` query parameter is the raw id (a project id, an epic key), not the cache scope. */
 const scopeIdParam = (scope: Scope): string => (typeof scope === 'string' ? scope : scope.id);
+
+/** `memberIssues` also needs the period start (`since`), which is part of its params. */
+const sinceQuery = (source: DatasetSource, params: unknown): string =>
+  source === 'memberIssues' ? `&since=${encodeURIComponent((params as { since: string }).since)}` : '';
 
 /** Single source of truth for the renderer (architecture §8.1). */
 @Injectable({ providedIn: 'root' })
@@ -247,7 +251,7 @@ export class AppStore {
     this.#hydratedKeys.add(cacheKey);
     this.#patchDataset(cacheKey, { status: 'loading', error: null });
 
-    const path = `/api/datasets/${source}?scopeId=${encodeURIComponent(scopeIdParam(scope))}`;
+    const path = `/api/datasets/${source}?scopeId=${encodeURIComponent(scopeIdParam(scope))}${sinceQuery(source, params)}`;
     this.#proxy
       .get<DatasetView>(path)
       .then((view) => {
@@ -304,6 +308,39 @@ export class AppStore {
   }
 
   /**
+   * Delta refresh of a project's `projectIssues` (no-op for an unknown project). The proxy upgrades
+   * it to a full load by itself when the stored payload version is outdated.
+   */
+  async refreshProjectIssues(projectId: string): Promise<void> {
+    const config = this.config();
+    const project = config?.projects.find((p) => p.id === projectId);
+    if (!config || !project) return;
+    await this.refreshDataset('projectIssues', project.id, projectIssuesParams(project, config));
+  }
+
+  /** The `memberIssues` dataset of an active team for a period start (`YYYY-MM-DD`), as held. */
+  memberIssues(teamId: string, since: string): DatasetState {
+    const key = this.#memberIssuesKey(teamId, since);
+    return (key && this.datasets()[key]) || EMPTY_DATASET;
+  }
+
+  /** Hydrates the team's `memberIssues` for `since` (no-op for an unknown team). */
+  ensureMemberIssues(teamId: string, since: string): void {
+    const config = this.config();
+    const team = config?.teams.find((t) => t.id === teamId);
+    if (!config || !team) return;
+    this.ensureHydrated('memberIssues', { type: 'team', id: team.id }, memberIssuesParams(team, since, config));
+  }
+
+  /** Delta refresh of the team's `memberIssues` for `since` (no-op for an unknown team). */
+  async refreshMemberIssues(teamId: string, since: string): Promise<void> {
+    const config = this.config();
+    const team = config?.teams.find((t) => t.id === teamId);
+    if (!config || !team) return;
+    await this.refreshDataset('memberIssues', { type: 'team', id: team.id }, memberIssuesParams(team, since, config));
+  }
+
+  /**
    * `POST /api/datasets/:source/refresh`. On failure the previous rows stay (stale, not empty).
    * Calls for a key that is already refreshing share the same promise.
    */
@@ -321,7 +358,7 @@ export class AppStore {
     this.#patchDataset(cacheKey, { status: 'loading', error: null });
     const scopeId = encodeURIComponent(scopeIdParam(scope));
     const run = this.#proxy
-      .post<DatasetView>(`/api/datasets/${source}/refresh?scopeId=${scopeId}&mode=${mode}`)
+      .post<DatasetView>(`/api/datasets/${source}/refresh?scopeId=${scopeId}${sinceQuery(source, params)}&mode=${mode}`)
       .then((view) => this.#patchDataset(cacheKey, { ...view, status: 'ready', error: null }))
       .catch((error: unknown) =>
         this.#patchDataset(cacheKey, { status: 'error', error: toStoreError(error) }),
@@ -336,6 +373,14 @@ export class AppStore {
     const project = config?.projects.find((p) => p.id === projectId);
     return config && project
       ? this.cacheKeyFor('projectIssues', project.id, projectIssuesParams(project, config))
+      : null;
+  }
+
+  #memberIssuesKey(teamId: string, since: string): string | null {
+    const config = this.config();
+    const team = config?.teams.find((t) => t.id === teamId);
+    return config && team
+      ? this.cacheKeyFor('memberIssues', { type: 'team', id: team.id }, memberIssuesParams(team, since, config))
       : null;
   }
 
