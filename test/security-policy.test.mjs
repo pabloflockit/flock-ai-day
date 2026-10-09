@@ -58,3 +58,13 @@ test('resolveAppFile maps app:// paths inside the root and blocks traversal', ()
   const folded = p.resolveAppFile('app://leadership-panel/a\\..\\..\\x', root);
   assert.ok(folded === null || folded.startsWith(root));
 });
+
+test('production build never relies on inline event handlers the CSP blocks', async () => {
+  // `inlineCritical` loads the global stylesheet with `onload="this.media='all'"`; the CSP has no
+  // `script-src 'unsafe-inline'`, so the handler never runs and the styles stay `media="print"`.
+  const { readFile } = await import('node:fs/promises');
+  const angular = JSON.parse(await readFile(new URL('../angular.json', import.meta.url), 'utf8'));
+  const project = Object.values(angular.projects)[0];
+  const optimization = project.architect.build.configurations.production.optimization;
+  assert.equal(optimization?.styles?.inlineCritical, false);
+});

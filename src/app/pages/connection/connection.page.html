@@ -181,7 +181,9 @@
 
 @switch (mode()) {
   @case ('loading') {
-    <p class="field-hint">Cargando…</p>
+    @if (configState().status !== 'error') {
+      <p class="field-hint">Cargando…</p>
+    }
   }
 
   @case ('wizard') {
