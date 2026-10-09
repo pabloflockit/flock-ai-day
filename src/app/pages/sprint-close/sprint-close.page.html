@@ -34,6 +34,11 @@
       <button type="button" class="btn-ghost refresh" [disabled]="!!periodError() || refreshing()" (click)="refresh()">
         Actualizar datos
       </button>
+      @if (aiAvailable()) {
+        <button type="button" class="btn-ghost ai-draft" [disabled]="!report() || aiBusy()" (click)="askAi()">
+          {{ aiBusy() ? 'Redactando…' : 'Redactar con IA' }}
+        </button>
+      }
       <button
         type="button"
         class="export"
@@ -47,6 +52,21 @@
 
     @if (periodError(); as message) {
       <p class="field-error period-error" role="alert">{{ message }}</p>
+    }
+    @if (aiConfirming()) {
+      <section class="card ai-confirm" role="alertdialog" aria-label="Confirmar envío a la IA">
+        <p>
+          Para redactar, se envían al proveedor de IA: cifras del informe, claves y títulos de ítems cerrados y
+          bloqueados, notas de higiene. No se envían personas.
+        </p>
+        <div class="ai-actions">
+          <button type="button" class="ai-send" (click)="draftWithAi()">Enviar y redactar</button>
+          <button type="button" class="btn-ghost ai-cancel" (click)="cancelAi()">Cancelar</button>
+        </div>
+      </section>
+    }
+    @if (aiError(); as message) {
+      <p class="field-error ai-error" role="alert">{{ message }}</p>
     }
     @if (feedback(); as f) {
       <p [class]="f.ok ? 'field-hint' : 'field-error'" [attr.role]="f.ok ? 'status' : 'alert'">{{ f.message }}</p>
@@ -97,6 +117,42 @@
         <div class="kpi"><span class="kpi-value">{{ r.kpis.blocked }}</span><span class="kpi-label">Bloqueadas</span></div>
       </section>
       <p class="field-hint outside-count">Fuera de las épicas del equipo: {{ r.outside.kpis.withMovement }} con movimiento.</p>
+      @if (narrative() !== null) {
+        <section class="card ai-narrative" aria-label="Borrador redactado con IA">
+          <h2>Titulares y lectura del sprint</h2>
+          @if (aiDemo()) {
+            <p class="field-hint ai-demo" role="status">Texto de demostración: no lo generó un modelo.</p>
+          }
+          @if (unknownNumbers().length > 0) {
+            <p class="field-error ai-warning" role="alert">
+              El texto menciona cifras que no están en el informe: {{ unknownNumbers().join(', ') }}. Revisalas antes
+              de exportar.
+            </p>
+          }
+          <label class="field">
+            Titulares (uno por línea)
+            <textarea
+              class="ai-headlines"
+              rows="4"
+              [value]="draftHeadlines()"
+              (input)="draftHeadlines.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <label class="field">
+            Lectura del sprint
+            <textarea
+              class="ai-reading"
+              rows="8"
+              [value]="draftReading()"
+              (input)="draftReading.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <p class="field-hint">Redactado con IA: revisalo antes de exportar. Se incluye en el HTML.</p>
+          <div>
+            <button type="button" class="btn-ghost ai-discard" (click)="discardNarrative()">Descartar</button>
+          </div>
+        </section>
+      }
       <iframe class="preview" sandbox="" title="Vista previa del cierre de sprint" [srcdoc]="previewDoc()"></iframe>
     }
   }

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, linkedSignal, signal, untracked } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { checkNarrativeFigures, narrativeInput, parseNarrative } from '../../../../shared/domain/ai-narrative.mjs';
 import { defaultPeriod } from '../../../../shared/domain/reports.mjs';
 import { buildSprintClose } from '../../../../shared/domain/sprint-close.mjs';
 import { renderSprintCloseHtml } from '../../../../shared/domain/sprint-close-html.mjs';
@@ -132,6 +133,30 @@ export class SprintClosePage {
     });
   });
 
+  /** AI draft: only when AI is enabled in the settings AND the key is stored (the key itself never reaches the renderer). */
+  readonly aiAvailable = computed(() => this.config()?.settings.ai.enabled === true && this.#store.aiKeyStored() === true);
+  readonly aiConfirming = signal(false);
+  readonly aiBusy = signal(false);
+  readonly aiError = signal<string | null>(null);
+  readonly aiDemo = signal(false);
+  /** Editable draft: one headline per line plus the reading; `null` until the model answers. */
+  readonly draftHeadlines = signal<string | null>(null);
+  readonly draftReading = signal('');
+  readonly narrative = computed<{ headlines: string[]; reading: string } | null>(() => {
+    const headlines = this.draftHeadlines();
+    if (headlines === null) return null;
+    return {
+      headlines: headlines.split('\n').map((h) => h.trim()).filter((h) => h !== ''),
+      reading: this.draftReading().trim(),
+    };
+  });
+  /** Figures in the text that are not in the report (plan 8.2); empty when all match. */
+  readonly unknownNumbers = computed(() => {
+    const narrative = this.narrative();
+    const report = this.report();
+    return narrative && report ? checkNarrativeFigures(narrative, report).unknownNumbers : [];
+  });
+
   readonly title = computed(() => `Cierre de sprint — ${this.team()?.name ?? ''} — ${this.from()}..${this.to()}`);
 
   readonly html = computed(() => {
@@ -144,6 +169,7 @@ export class SprintClosePage {
       generatedAt: this.#now,
       timeZone: this.timeZone,
       jiraBaseUrl: config.jira.baseUrl,
+      narrative: this.narrative(),
     });
   });
 
@@ -163,6 +189,13 @@ export class SprintClosePage {
     void this.#store.loadConfig();
     void this.#store.loadConnectionStatus();
     void this.#loadStatuses();
+    // A draft belongs to one team and period: changing either discards it.
+    effect(() => {
+      this.teamId();
+      this.from();
+      this.to();
+      untracked(() => this.discardNarrative());
+    });
     // Reads what the proxy holds; never refreshes from Jira (the user asks with "Actualizar datos").
     effect(() => {
       const ids = this.projects().map((p) => p.id);
@@ -202,6 +235,48 @@ export class SprintClosePage {
       ]);
     } finally {
       this.refreshing.set(false);
+    }
+  }
+
+  askAi(): void {
+    this.aiError.set(null);
+    this.aiConfirming.set(true);
+  }
+
+  cancelAi(): void {
+    this.aiConfirming.set(false);
+  }
+
+  discardNarrative(): void {
+    this.draftHeadlines.set(null);
+    this.draftReading.set('');
+    this.aiDemo.set(false);
+    this.aiError.set(null);
+    this.aiConfirming.set(false);
+  }
+
+  /** Sends ONLY the `narrativeInput` figures/titles to the proxy; the proxy holds the key. */
+  async draftWithAi(): Promise<void> {
+    const report = this.report();
+    if (!report || !this.aiAvailable() || this.aiBusy()) return;
+    this.aiConfirming.set(false);
+    this.aiBusy.set(true);
+    this.aiError.set(null);
+    try {
+      const input = narrativeInput(report, { teamName: this.team()?.name ?? '' });
+      const answer = await this.#proxy.post<{ text: string; demo?: boolean }>('/api/reports/ai', { input });
+      const parsed = parseNarrative(answer.text);
+      if (!parsed) {
+        this.aiError.set('La IA devolvió una respuesta que no se pudo leer. Probá de nuevo.');
+        return;
+      }
+      this.draftHeadlines.set(parsed.headlines.join('\n'));
+      this.draftReading.set(parsed.reading);
+      this.aiDemo.set(answer.demo === true);
+    } catch (error) {
+      this.aiError.set(error instanceof Error && error.message ? error.message : 'No se pudo redactar con IA.');
+    } finally {
+      this.aiBusy.set(false);
     }
   }
 

@@ -197,3 +197,23 @@ test('empty report: header, zero KPIs and the no-movement message', () => {
   assert.ok(!html.includes('<h2>Frontend</h2>'));
 });
 
+
+test('narrative block: Titulares + Lectura after the KPIs, escaped, labelled as AI', () => {
+  const narrative = { headlines: ['Se cerraron 2 <b>ítems</b>'], reading: 'Lectura "x" & más\nSegunda línea' };
+  const html = render(richReport(), { narrative });
+  assert.ok(html.includes('<h2>Titulares</h2>') && html.includes('<h2>Lectura del sprint</h2>'));
+  assert.ok(html.includes('Se cerraron 2 &lt;b&gt;ítems&lt;/b&gt;'));
+  assert.ok(html.includes('Lectura &quot;x&quot; &amp; más'));
+  assert.ok(!html.includes('<b>ítems'));
+  assert.ok(html.includes('Redactado con IA y revisado por el equipo'));
+  assert.ok(html.indexOf('class="kpis"') < html.indexOf('<section class="narrative">'));
+  assert.ok(html.indexOf('<section class="narrative">') < html.indexOf('<section class="layer">'));
+});
+
+test('no narrative (absent, null, empty): no block at all', () => {
+  for (const narrative of [undefined, null, { headlines: [], reading: '  ' }]) {
+    const html = render(richReport(), { narrative });
+    assert.ok(!html.includes('<section class="narrative">'));
+    assert.ok(!html.includes('Redactado con IA'));
+  }
+});

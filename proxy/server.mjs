@@ -10,6 +10,7 @@ import { registerJiraMetaRoutes } from './routes/jira-meta.mjs';
 import { registerDatasetRoutes } from './routes/datasets.mjs';
 import { registerStorageRoutes } from './routes/storage.mjs';
 import { registerSyncRoutes } from './routes/sync.mjs';
+import { registerAiRoutes } from './routes/ai.mjs';
 import { createVerifiedOrigins } from './config/verified-origins.mjs';
 import { createSecretGuard } from './security/session-secret.mjs';
 import { evaluateCors } from './security/cors.mjs';
@@ -19,6 +20,9 @@ const MAX_BODY_BYTES = 16 * 1024;
 // The configuration document (teams, members, epics) legitimately outgrows 16 KB.
 const MAX_CONFIG_BODY_BYTES = 1024 * 1024;
 const CONFIG_PATH = '/api/config';
+// The AI narrative input is capped at 64 KB by its route; the envelope needs a little headroom.
+const AI_PATH = '/api/reports/ai';
+const MAX_AI_BODY_BYTES = 80 * 1024;
 const BODY_METHODS = new Set(['PUT', 'POST', 'PATCH']);
 
 /**
@@ -93,6 +97,8 @@ function readPackageVersion() {
  *   stores?: { config?: ReturnType<typeof import('./config/store.mjs').createConfigStore>, datasets?: ReturnType<typeof import('./jira/refresh.mjs').createProjectIssuesService> },
  *   storage?: { handle: ReturnType<typeof import('./cache/db.mjs').openDatabase> },
  *   verifiedOrigins?: ReturnType<typeof createVerifiedOrigins>,
+ *   aiDemo?: (input: unknown) => string,
+ *   aiTimeoutMs?: number,
  *   guards?: Array<(ctx: import('./router.mjs').RouteContext) => GuardResult | null | Promise<GuardResult | null>>,
  *   registerRoutes?: Array<(router: ReturnType<typeof createRouter>) => void>,
  * }} ProxyDeps
@@ -111,6 +117,7 @@ function readPackageVersion() {
  *  - `deps.stores`: `{ config, datasets }`: the config store and the project-issues service, both over the encrypted SQLite cache.
  *  - `deps.storage`: `{ handle }`, the database handle behind `POST /api/storage/reset`.
  *  - `deps.sync`: the sync service behind `POST /api/sync` and `GET /api/sync/status` (503 without it).
+ *  - `deps.aiDemo`: demo-mode narrative builder; when set, `POST /api/reports/ai` answers it instead of calling the provider.
  *  - `deps.verifiedOrigins`: Cloud-verified origins required by `PUT /api/config` (default: a fresh in-memory registry).
  *  - `deps.guards`: extra request guards run after the secret check. A guard returns `null` to continue, or a `{ status, body }` result to short-circuit.
  *  - `deps.registerRoutes`: extra route modules from `proxy/routes/`.
@@ -127,6 +134,8 @@ export function createProxyServer(deps) {
     stores: deps.stores ?? {},
     storage: deps.storage,
     sync: deps.sync,
+    aiDemo: deps.aiDemo,
+    aiTimeoutMs: deps.aiTimeoutMs,
     // Per process: what `/api/connection/verify` proved is Cloud, consulted by `PUT /api/config`.
     verifiedOrigins: deps.verifiedOrigins ?? createVerifiedOrigins(),
   };
@@ -141,6 +150,7 @@ export function createProxyServer(deps) {
   registerDatasetRoutes(router);
   registerStorageRoutes(router);
   registerSyncRoutes(router);
+  registerAiRoutes(router);
   for (const register of deps.registerRoutes ?? []) register(router);
 
   /**
@@ -166,7 +176,7 @@ export function createProxyServer(deps) {
       if (BODY_METHODS.has(ctx.method.toUpperCase())) {
         const parsed = await readJsonBody(
           req,
-          ctx.path === CONFIG_PATH ? MAX_CONFIG_BODY_BYTES : MAX_BODY_BYTES,
+          ctx.path === CONFIG_PATH ? MAX_CONFIG_BODY_BYTES : ctx.path === AI_PATH ? MAX_AI_BODY_BYTES : MAX_BODY_BYTES,
         );
         if ('error' in parsed) return parsed.error;
         ctx.body = parsed.body;

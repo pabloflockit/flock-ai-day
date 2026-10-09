@@ -65,3 +65,21 @@
   border-radius: var(--radius-sm);
   background: var(--bg);
 }
+
+.ai-confirm,
+.ai-narrative {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-end: var(--space-5);
+
+  p,
+  h2 {
+    margin: 0;
+  }
+}
+
+.ai-actions {
+  display: flex;
+  gap: var(--space-3);
+}
