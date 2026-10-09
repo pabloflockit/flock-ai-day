@@ -24,6 +24,8 @@ export class ProxyError extends Error {
   constructor(
     readonly code: string,
     message: string,
+    /** Structured data from the proxy envelope, e.g. `{ issues }` for `VALIDATION_FAILED`. */
+    readonly details?: unknown,
   ) {
     super(message);
   }
@@ -75,7 +77,7 @@ export class ProxyClient {
       );
     }
     if (!envelope.ok) {
-      throw new ProxyError(envelope.error.code, envelope.error.message);
+      throw new ProxyError(envelope.error.code, envelope.error.message, envelope.error.details);
     }
     return envelope.data as T;
   }

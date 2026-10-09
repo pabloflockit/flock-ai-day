@@ -68,6 +68,21 @@ const rules = [
     (c) => (c.jira.baseUrl = 'https://127.0.0.1'),
     ['JIRA_URL_INVALID@jira.baseUrl'],
   ],
+  [
+    'duplicate team id',
+    (c) => (c.teams[1].id = 't1'),
+    ['PROJECT_TEAM_MISSING@projects[1].teamId', 'TEAM_ID_DUPLICATE@teams[1].id'],
+  ],
+  [
+    'duplicate project id',
+    (c) => (c.projects[1].id = 'p1'),
+    ['PROJECT_ID_DUPLICATE@projects[1].id'],
+  ],
+  [
+    'epic_link mode without field',
+    (c) => (c.jira.epicLinkMode = 'epic_link'),
+    ['EPIC_LINK_FIELD_REQUIRED@jira.epicLinkFieldId'],
+  ],
 ];
 for (const [name, mutate, expected] of rules) {
   test(`rule: ${name}`, () => {

@@ -27,10 +27,22 @@ export function validateConfig(config) {
     }
   }
 
+  if (config.jira.epicLinkMode === 'epic_link' && !config.jira.epicLinkFieldId) {
+    add(
+      'EPIC_LINK_FIELD_REQUIRED',
+      'jira.epicLinkFieldId',
+      'El método de vínculo "Epic Link" necesita el campo de Jira que lo guarda.',
+    );
+  }
+
   const teamNames = new Set();
-  const teamIds = new Set(config.teams.map((t) => t.id));
+  const teamIds = new Set();
   config.teams.forEach((team, i) => {
     const path = `teams[${i}]`;
+    if (teamIds.has(team.id)) {
+      add('TEAM_ID_DUPLICATE', `${path}.id`, `El identificador del equipo "${team.name}" está repetido.`);
+    }
+    teamIds.add(team.id);
     if (team.name === '') {
       add('TEAM_NAME_REQUIRED', `${path}.name`, 'El equipo necesita un nombre.');
     } else if (teamNames.has(nameKey(team.name))) {
@@ -52,10 +64,19 @@ export function validateConfig(config) {
   });
 
   const projectNames = new Set();
+  const projectIds = new Set();
   /** @type {Map<string, string>} epic key -> project id that owns it */
   const epicOwner = new Map();
   config.projects.forEach((project, i) => {
     const path = `projects[${i}]`;
+    if (projectIds.has(project.id)) {
+      add(
+        'PROJECT_ID_DUPLICATE',
+        `${path}.id`,
+        `El identificador del proyecto "${project.name}" está repetido.`,
+      );
+    }
+    projectIds.add(project.id);
     if (project.name === '') {
       add('PROJECT_NAME_REQUIRED', `${path}.name`, 'El proyecto necesita un nombre.');
     } else if (projectNames.has(nameKey(project.name))) {

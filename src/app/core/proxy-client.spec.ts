@@ -36,4 +36,14 @@ describe('ProxyClient', () => {
     );
     expect(ProxyError).toBeDefined();
   });
+
+  it('keeps the error details for the UI', async () => {
+    window.leadershipPanel = { proxyBaseUrl: 'http://127.0.0.1:3100', proxySecret: 'x' } as never;
+    const issues = [{ code: 'TEAM_NAME_DUPLICATE', path: 'teams[1].name', message: 'dup' }];
+    stubFetch({ ok: false, error: { code: 'VALIDATION_FAILED', message: 'invalid', details: { issues } } });
+
+    await expectAsync(new ProxyClient().put('/api/config', {})).toBeRejectedWith(
+      jasmine.objectContaining({ code: 'VALIDATION_FAILED', details: { issues } }),
+    );
+  });
 });
