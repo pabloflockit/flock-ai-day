@@ -243,6 +243,7 @@ CREATE TABLE datasets (
 | Una issue | `GET /rest/api/3/issue/{key}` |
 | Historial de una issue | `GET /rest/api/3/issue/{key}/changelog` |
 | Usuarios | `GET /rest/api/3/user/search`, `GET /rest/api/3/user` |
+| Componentes de un proyecto | `GET /rest/api/3/project/{key}/components` (array simple, sin paginar) |
 
 ### 6.2 Búsqueda (Jira Cloud)
 - El endpoint viejo `/rest/api/3/search` fue **removido**. Usar `/search/jql`: pagina con `nextPageToken` (no `startAt`), **no devuelve total**, requiere `fields` explícitos y es **eventualmente consistente**.
@@ -343,6 +344,7 @@ GET  /api/jira/fields               # cache TTL; incluye schema.type
 GET  /api/jira/statuses
 GET  /api/jira/issuetypes
 GET  /api/jira/users?query=         # personas activas, sin apps/bots
+GET  /api/jira/projects/:key/components  # [{ id, name }] por nombre; :key = clave de proyecto Jira (A-Z, 0-9, _)
 GET  /api/jira/epics/:key           # validación de una épica
 GET  /api/jira/epics?query=         # búsqueda por texto (flujo 2, fase P1)
 
@@ -379,6 +381,7 @@ POST /api/reports/ai                 # solo si está habilitado; recibe métrica
 ### 8.4 Configuración
 - **Una sola función** `normalizeConfig(raw)`: lista blanca, idempotente, descarta claves desconocidas. Es el único lugar donde se migra la forma de la configuración.
 - `validateConfig` aplica las reglas de integridad de negocio (definidas en `plan.md`).
+- **Capas por componente** (informe de cierre): `jira.componentLayers: Array<{ projectKey, componentId, componentName, layer: 'frontend' | 'backend' | 'functional' }>`, default `[]`. Se mapea por clave de proyecto Jira + id de componente (los nombres cambian entre proyectos). `normalizeConfig` descarta entradas mal formadas y repetidas (gana la última); `validateConfig` rechaza claves y capas inválidas (`COMPONENT_LAYER_*`). **No mueve la clave de cache**: las filas ya traen todos sus componentes y la capa se resuelve al armar el informe.
 
 ### 8.5 Estado de vista
 - Filtros de vista (equipo seleccionado, proyecto y épica, rango de fechas) son **estado de vista** persistido por scope. No son configuración ni reglas.

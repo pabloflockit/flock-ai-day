@@ -1,3 +1,4 @@
+import { COMPONENT_LAYERS, JIRA_PROJECT_KEY_PATTERN } from '../../shared/contracts.mjs';
 import { validateJiraUrl } from '../../shared/jira-url.mjs';
 
 /**
@@ -34,6 +35,30 @@ export function validateConfig(config) {
       'El método de vínculo "Epic Link" necesita el campo de Jira que lo guarda.',
     );
   }
+
+  const mapped = new Set();
+  config.jira.componentLayers.forEach((entry, i) => {
+    const path = `jira.componentLayers[${i}]`;
+    if (!JIRA_PROJECT_KEY_PATTERN.test(entry.projectKey)) {
+      add(
+        'COMPONENT_LAYER_PROJECT_KEY_INVALID',
+        `${path}.projectKey`,
+        `La clave de proyecto de Jira "${entry.projectKey}" no es válida.`,
+      );
+    }
+    if (!COMPONENT_LAYERS.includes(entry.layer)) {
+      add('COMPONENT_LAYER_INVALID', `${path}.layer`, 'La capa elegida no es válida.');
+    }
+    const id = `${entry.projectKey}|${entry.componentId}`;
+    if (mapped.has(id)) {
+      add(
+        'COMPONENT_LAYER_DUPLICATE',
+        `${path}.componentId`,
+        `El componente "${entry.componentName}" ya tiene una capa asignada.`,
+      );
+    }
+    mapped.add(id);
+  });
 
   const teamNames = new Set();
   const teamIds = new Set();

@@ -38,7 +38,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 
 - [x] 1. `IssueRow` gets `statusChanges` (transition history from the changelog) and `components` (`{ id, name }[]`):
       search fields, projection, payload version bump, demo fixtures, tests.
-- [ ] 2. Component -> layer mapping: read-only `GET /api/jira/projects/:key/components` route, mapping per Jira
+- [x] 2. Component -> layer mapping: read-only `GET /api/jira/projects/:key/components` route, mapping per Jira
       project key + component id in the config (`normalizeConfig`, `validateConfig`), picker screen.
 - [ ] 3. Outside-the-epics dataset: read-only query for the team members' issues with movement in the period that
       are not under the team's epics (separate section).
@@ -70,3 +70,12 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   demo-fetch serves `GET /rest/api/3/project/DEMO/components`. RED observed for the projection tests (`undefined`
   fields). node 474/474, Karma 169/169, `build:desktop` OK. `validate-scope` not re-run (projection shape only grew).
   Commit: `feat(jira): project status history and components into issue rows`.
+- Task 2 (worker + parent): `jira.componentLayers` (`{ projectKey, componentId, componentName, layer }[]`, normalize +
+  validate codes, does not move cache keys), `setComponentLayer` op, `componentLayerRows` view, client
+  `projectComponents` (metadata-cached), route `GET /api/jira/projects/:key/components` (400 on invalid key, works in
+  demo), "Capas por componente" section in Conexión -> Particularidades (components loaded on demand, each select saves
+  at once). Parent fix: saving a layer reloaded the config and wiped unsaved status-mapping edits; the overrides draft
+  now resets only when the saved overrides change by content (RED observed, then GREEN). `docs/plan.md` §2.1 and
+  `docs/architecture.md` updated. RED observed for the node tests. Two verifier runs failed with an internal subagent
+  error; suites run by the parent: node 488/488, Karma 175/175, `build:desktop` OK.
+  Commit: `feat(config): map Jira components to report layers`.

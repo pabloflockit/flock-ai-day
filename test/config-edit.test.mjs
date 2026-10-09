@@ -203,3 +203,44 @@ test('setGeneralSettings sets business days and AI; days must be whole numbers f
   assert.equal(issue.ok, false);
   assert.equal(issue.issues[0].path, 'settings.agingBusinessDays');
 });
+
+test('setComponentLayer maps a component to a layer, replaces it and removes it with null', () => {
+  const component = { projectKey: 'ABC', componentId: '10', componentName: 'FRONTEND' };
+  const first = ok(edit.setComponentLayer(base(), component, 'frontend'));
+  assert.deepEqual(first.jira.componentLayers, [{ ...component, layer: 'frontend' }]);
+
+  const other = ok(edit.setComponentLayer(first, { projectKey: 'ABC', componentId: '11', componentName: 'BACKEND' }, 'backend'));
+  const moved = ok(edit.setComponentLayer(other, { ...component, componentName: 'Front' }, 'functional'));
+  assert.deepEqual(moved.jira.componentLayers.map((l) => [l.componentId, l.layer, l.componentName]), [
+    ['10', 'functional', 'Front'],
+    ['11', 'backend', 'BACKEND'],
+  ]);
+
+  const removed = ok(edit.setComponentLayer(moved, component, null));
+  assert.deepEqual(removed.jira.componentLayers.map((l) => l.componentId), ['11']);
+  // The same component id under another Jira project is a different component.
+  const twin = ok(edit.setComponentLayer(removed, { ...component, projectKey: 'XYZ' }, 'backend'));
+  assert.equal(twin.jira.componentLayers.length, 2);
+  assert.equal(ok(edit.setComponentLayer(base(), component, null)).jira.componentLayers.length, 0);
+});
+
+test('setComponentLayer rejects bad input and never modifies the config', () => {
+  const config = base();
+  const snapshot = structuredClone(config);
+  const component = { projectKey: 'ABC', componentId: '10', componentName: 'FE' };
+  assert.deepEqual(codes(edit.setComponentLayer(config, component, 'qa')), ['COMPONENT_LAYER_INVALID']);
+  assert.deepEqual(codes(edit.setComponentLayer(config, { ...component, projectKey: 'a b' }, 'backend')), [
+    'COMPONENT_LAYER_PROJECT_KEY_INVALID',
+  ]);
+  assert.deepEqual(codes(edit.setComponentLayer(config, { ...component, componentId: ' ' }, 'backend')), [
+    'COMPONENT_LAYER_COMPONENT_REQUIRED',
+  ]);
+  edit.setComponentLayer(config, component, 'backend');
+  assert.deepEqual(config, snapshot);
+});
+
+test('setJiraParticularities keeps the component layers', () => {
+  const withLayer = ok(edit.setComponentLayer(base(), { projectKey: 'ABC', componentId: '1', componentName: 'FE' }, 'frontend'));
+  const next = ok(edit.setJiraParticularities(withLayer, { epicLinkMode: 'parent', epicLinkFieldId: null, statusCategoryOverrides: {} }));
+  assert.equal(next.jira.componentLayers.length, 1);
+});

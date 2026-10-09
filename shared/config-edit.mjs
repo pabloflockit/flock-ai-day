@@ -1,3 +1,4 @@
+import { COMPONENT_LAYERS, JIRA_PROJECT_KEY_PATTERN } from './contracts.mjs';
 import { guardDeleteProject, guardDeleteTeam } from '../proxy/config/validate.mjs';
 
 /**
@@ -354,6 +355,40 @@ export function setJiraParticularities(config, p) {
     draft.jira.epicLinkMode = mode;
     draft.jira.epicLinkFieldId = fieldId;
     draft.jira.statusCategoryOverrides = overrides;
+  });
+}
+
+// ---- Component layers (sprint report) ---------------------------------------------------------
+
+/**
+ * Maps a Jira component to a report layer (`null` removes the mapping). The mapping is keyed by
+ * Jira project key + component id: component names differ per project.
+ * @param {AppConfig} config
+ * @param {{ projectKey: string, componentId: string, componentName: string }} component
+ * @param {'frontend' | 'backend' | 'functional' | null} layer
+ */
+export function setComponentLayer(config, component, layer) {
+  const projectKey = component.projectKey.trim().toUpperCase();
+  const componentId = component.componentId.trim();
+  if (!JIRA_PROJECT_KEY_PATTERN.test(projectKey)) {
+    return fail('COMPONENT_LAYER_PROJECT_KEY_INVALID', 'jira.componentLayers', 'La clave de proyecto de Jira no es válida.');
+  }
+  if (componentId === '') {
+    return fail('COMPONENT_LAYER_COMPONENT_REQUIRED', 'jira.componentLayers', 'Elegí un componente de Jira.');
+  }
+  if (layer !== null && !COMPONENT_LAYERS.includes(layer)) {
+    return fail('COMPONENT_LAYER_INVALID', 'jira.componentLayers', 'La capa elegida no es válida.');
+  }
+  return apply(config, (draft) => {
+    const list = draft.jira.componentLayers;
+    const index = list.findIndex((l) => l.projectKey === projectKey && l.componentId === componentId);
+    if (layer === null) {
+      if (index >= 0) list.splice(index, 1);
+      return;
+    }
+    const entry = { projectKey, componentId, componentName: component.componentName.trim(), layer };
+    if (index >= 0) list[index] = entry;
+    else list.push(entry);
   });
 }
 

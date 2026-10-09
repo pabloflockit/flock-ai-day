@@ -1,3 +1,4 @@
+import { COMPONENT_LAYERS } from '../../shared/contracts.mjs';
 import { validateJiraUrl } from '../../shared/jira-url.mjs';
 
 /**
@@ -30,10 +31,11 @@ function canonicalBaseUrl(value) {
  * @typedef {{ accountId: string, displayName: string, emailAddress: string | null, jiraActive: boolean, active: boolean, refreshedAt: string }} Member
  * @typedef {{ id: string, name: string, description: string | null, active: boolean, members: Member[] }} Team
  * @typedef {{ key: string, issueTypeId: string, summary: string, active: boolean, linkMethodUsed: 'parent' | 'epic_link' | null }} Epic
+ * @typedef {{ projectKey: string, componentId: string, componentName: string, layer: 'frontend' | 'backend' | 'functional' }} ComponentLayer
  * @typedef {{ id: string, teamId: string, name: string, description: string | null, active: boolean, workUnit: WorkUnit, measure: Measure, epics: Epic[] }} Project
  * @typedef {{
  *   version: number,
- *   jira: { baseUrl: string, email: string, epicLinkMode: 'parent' | 'epic_link' | 'auto', epicLinkFieldId: string | null, timeoutMs: number, maxRetries: number, statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'> },
+ *   jira: { baseUrl: string, email: string, epicLinkMode: 'parent' | 'epic_link' | 'auto', epicLinkFieldId: string | null, timeoutMs: number, maxRetries: number, statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'>, componentLayers: ComponentLayer[] },
  *   settings: { staleBusinessDays: number, agingBusinessDays: number, fullRefreshMaxAgeHours: number, ai: { enabled: boolean } },
  *   teams: Team[],
  *   projects: Project[],
@@ -148,6 +150,30 @@ function normalizeOverrides(raw) {
 }
 
 /**
+ * Component -> layer mapping, by Jira project key + component id. An entry without a project key,
+ * component id or a known layer is dropped; the same component twice keeps the LAST one (in the
+ * position of the first). The project key is stored upper-case, like epic keys.
+ * @param {unknown} raw @returns {ComponentLayer[]}
+ */
+function normalizeComponentLayers(raw) {
+  /** @type {Map<string, ComponentLayer>} */
+  const byComponent = new Map();
+  for (const item of arr(raw)) {
+    const e = obj(item);
+    const projectKey = str(e.projectKey).toUpperCase();
+    const componentId = str(e.componentId);
+    if (!projectKey || !componentId || !COMPONENT_LAYERS.includes(e.layer)) continue;
+    byComponent.set(`${projectKey}|${componentId}`, {
+      projectKey,
+      componentId,
+      componentName: str(e.componentName),
+      layer: e.layer,
+    });
+  }
+  return [...byComponent.values()];
+}
+
+/**
  * @param {unknown} raw anything (a stored document, a request body, `undefined`)
  * @returns {AppConfig}
  */
@@ -165,6 +191,7 @@ export function normalizeConfig(raw) {
       timeoutMs: int(jira.timeoutMs, 15000, 1),
       maxRetries: int(jira.maxRetries, 3, 0),
       statusCategoryOverrides: normalizeOverrides(jira.statusCategoryOverrides),
+      componentLayers: normalizeComponentLayers(jira.componentLayers),
     },
     settings: {
       staleBusinessDays: int(settings.staleBusinessDays, 5, 1),

@@ -177,6 +177,68 @@
       </table>
     </div>
   }
+
+  <section data-testid="component-layers" class="layers">
+    <h3>Capas por componente</h3>
+    <p class="field-hint">
+      Elegí qué componentes de Jira corresponden a Frontend, Backend o Funcional. Lo que no tenga un componente
+      asignado va a 'Sin capa' en el informe de cierre.
+    </p>
+    @for (row of layerRows(); track row.projectKey) {
+      <div class="layer-project" data-testid="layer-project">
+        <h4>{{ row.projectKey }}</h4>
+        @let op = componentOps()[row.projectKey];
+        @if (!op || op.status === 'idle') {
+          <button type="button" class="btn-ghost" (click)="loadComponents(row.projectKey)">Cargar componentes</button>
+        }
+        @if (op?.status === 'loading') {
+          <p class="field-hint">Cargando componentes…</p>
+        }
+        @if (op?.error; as e) {
+          <p class="field-error" role="alert">
+            No se pudieron leer los componentes: {{ e.message }} (código: {{ e.code }})
+          </p>
+          <button type="button" class="btn-ghost" (click)="loadComponents(row.projectKey)">Reintentar</button>
+        }
+        @if (op?.data; as list) {
+          @if (list.length === 0) {
+            <p class="field-hint">Este proyecto no tiene componentes en Jira.</p>
+          } @else {
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Componente</th>
+                    <th>Capa</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (c of list; track c.id) {
+                    <tr>
+                      <td>{{ c.name }}</td>
+                      <td>
+                        <select
+                          [attr.aria-label]="'Capa para ' + c.name + ' (' + row.projectKey + ')'"
+                          (change)="setComponentLayer(row.projectKey, c, $any($event.target).value)"
+                        >
+                          <option value="" [selected]="layerOf(row.projectKey, c.id) === ''">—</option>
+                          @for (l of layers; track l) {
+                            <option [value]="l" [selected]="layerOf(row.projectKey, c.id) === l">{{ layerLabel[l] }}</option>
+                          }
+                        </select>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+      </div>
+    } @empty {
+      <p class="field-hint">Todavía no hay épicas configuradas: agregá una en un proyecto para mapear sus componentes.</p>
+    }
+  </section>
 </ng-template>
 
 @switch (mode()) {

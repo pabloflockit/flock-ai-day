@@ -124,3 +124,17 @@ test('delete guards', () => {
     ['TEAM_NOT_FOUND'],
   );
 });
+
+test('componentLayers: bad project keys and layers are rejected with codes', () => {
+  const layers = (c, list) => (c.jira.componentLayers = list);
+  const entry = (extra = {}) => ({ projectKey: 'ABC', componentId: '1', componentName: 'FE', layer: 'frontend', ...extra });
+  const issues = (list) => {
+    const config = normalizeConfig(base());
+    layers(config, list);
+    return validateConfig(config).map((i) => `${i.code}@${i.path}`);
+  };
+  assert.deepEqual(issues([entry(), entry({ componentId: '2', layer: 'backend' })]), []);
+  assert.deepEqual(issues([entry({ projectKey: 'abc-1' })]), ['COMPONENT_LAYER_PROJECT_KEY_INVALID@jira.componentLayers[0].projectKey']);
+  assert.deepEqual(issues([entry(), entry({ componentId: '2', layer: 'qa' })]), ['COMPONENT_LAYER_INVALID@jira.componentLayers[1].layer']);
+  assert.deepEqual(issues([entry(), entry({ layer: 'backend' })]), ['COMPONENT_LAYER_DUPLICATE@jira.componentLayers[1].componentId']);
+});

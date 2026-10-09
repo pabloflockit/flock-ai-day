@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createJiraClient } from '../proxy/jira/client.mjs';
 import { createGuardedFetch } from '../proxy/security/guarded-fetch.mjs';
 import { startTestProxy, withSecret } from './helpers.mjs';
+import { createDemoFetch } from '../fixtures/demo/demo-fetch.mjs';
+import { DEMO_TOKEN, buildDemoConfig } from '../fixtures/demo/index.mjs';
 
 const TOKEN = 'ATATT-super-secret-token-value';
 const json = (body, status = 200) =>
@@ -209,6 +211,65 @@ test('Jira routes stay behind the secret and answer 503 without a client', async
     assert.equal((await res.json()).error.code, 'JIRA_NOT_CONFIGURED');
     const post = await fetch(`${proxy.base}/api/jira/fields`, { method: 'POST', headers: withSecret() });
     assert.equal(post.status, 405);
+  } finally {
+    await proxy.close();
+  }
+});
+
+test('projects/:key/components lists id and name only, sorted, read-only', async () => {
+  const { proxy, calls, call } = await withProxy({
+    '/rest/api/3/project/ABC/components': () =>
+      json([
+        { self: 'https://acme.atlassian.net/x', id: '2', name: 'Zeta', projectId: 5, assigneeType: 'X' },
+        { self: 'y', id: '1', name: 'Alfa', projectId: 5 },
+      ]),
+  });
+  try {
+    const res = await call('GET', '/api/jira/projects/ABC/components');
+    assert.equal(res.status, 200);
+    assert.deepEqual(res.body.data, [{ id: '1', name: 'Alfa' }, { id: '2', name: 'Zeta' }]);
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].init.method ?? 'GET', 'GET');
+    assert.equal((await call('GET', '/api/jira/projects/NOPE/components')).body.error.code, 'NOT_FOUND');
+  } finally {
+    await proxy.close();
+  }
+});
+
+test('projects/:key/components: invalid key is a 400 without calling Jira; auth and method guards apply', async () => {
+  const { proxy, calls, call } = await withProxy({});
+  try {
+    for (const key of ['abc-1', 'A%20B', '1ABC', 'ABC%2F..']) {
+      const res = await call('GET', `/api/jira/projects/${key}/components`);
+      assert.equal(res.status, 400, key);
+      assert.equal(res.body.error.code, 'VALIDATION_ERROR');
+    }
+    assert.equal(calls.length, 0);
+    assert.equal((await fetch(`${proxy.base}/api/jira/projects/ABC/components`)).status, 401);
+    const post = await fetch(`${proxy.base}/api/jira/projects/ABC/components`, { method: 'POST', headers: withSecret() });
+    assert.equal(post.status, 405);
+  } finally {
+    await proxy.close();
+  }
+});
+
+test('projects/:key/components answers over the demo fetch (DEMO key)', async () => {
+  const demo = createDemoFetch({ now: () => '2026-10-09T12:00:00.000Z' });
+  const secrets = { getJiraToken: () => DEMO_TOKEN };
+  const jira = createJiraClient({
+    getConfig: () => buildDemoConfig(),
+    secrets,
+    fetchImpl: demo,
+    sleep: async () => {},
+  });
+  const proxy = await startTestProxy({ jira, secrets });
+  try {
+    const res = await fetch(`${proxy.base}/api/jira/projects/DEMO/components`, { headers: withSecret() });
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    const names = body.data.map((c) => c.name);
+    assert.ok(names.includes('FRONTEND') && names.includes('BACKEND'));
+    for (const c of body.data) assert.deepEqual(Object.keys(c).sort(), ['id', 'name']);
   } finally {
     await proxy.close();
   }

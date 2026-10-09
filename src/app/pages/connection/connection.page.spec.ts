@@ -2,7 +2,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { normalizeConfig } from '../../../../proxy/config/normalize.mjs';
-import { ProxyClient } from '../../core/proxy-client';
+import { ProxyClient, ProxyError } from '../../core/proxy-client';
 import { ConnectionPage } from './connection.page';
 
 const SITE = 'https://acme.atlassian.net';
@@ -18,11 +18,24 @@ const fields = [
   { id: 'summary', name: 'Summary', custom: false, schema: { type: 'string' } },
 ];
 
+const components = [
+  { id: '10', name: 'BACKEND' },
+  { id: '11', name: 'FRONTEND' },
+];
+
 describe('ConnectionPage', () => {
   const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
 
-  function setup(options: { jira?: Record<string, unknown>; tokenStored?: boolean } = {}) {
-    let stored = normalizeConfig({ jira: options.jira ?? {} });
+  function setup(
+    options: { jira?: Record<string, unknown>; tokenStored?: boolean; epicKeys?: string[]; componentsFail?: boolean } = {},
+  ) {
+    let stored = normalizeConfig({
+      jira: options.jira ?? {},
+      teams: [{ id: 't1', name: 'Equipo' }],
+      projects: options.epicKeys
+        ? [{ id: 'p1', teamId: 't1', name: 'Proyecto', epics: options.epicKeys.map((key) => ({ key })) }]
+        : [],
+    });
     const calls: string[] = [];
     const proxy = {
       health: () => Promise.resolve({ status: 'ok', version: '1.0.0' }),
@@ -32,6 +45,10 @@ describe('ConnectionPage', () => {
         if (path === '/api/connection/status') return Promise.resolve({ tokenStored: options.tokenStored ?? false });
         if (path === '/api/jira/statuses') return Promise.resolve(statuses);
         if (path === '/api/jira/fields') return Promise.resolve(fields);
+        if (path.startsWith('/api/jira/projects/')) {
+          if (options.componentsFail) return Promise.reject(new ProxyError('UNREACHABLE', 'No se pudo llegar a Jira.'));
+          return Promise.resolve(components);
+        }
         return Promise.reject(new Error(`unexpected ${path}`));
       }),
       post: jasmine.createSpy('post').and.callFake((path: string, body?: { baseUrl: string }) => {
@@ -189,5 +206,75 @@ describe('ConnectionPage', () => {
     calls.length = 0;
     await page.saveAndTest();
     expect(calls).toEqual(['PUT /api/config', 'POST /api/connection/test']);
+  });
+
+  describe('Capas por componente', () => {
+    const layered = { ...configured, epicKeys: ['zed-1', 'ABC-2', 'ABC-3'] };
+    const section = (el: HTMLElement) => el.querySelector('[data-testid="component-layers"]') as HTMLElement;
+
+    it('shows an empty state when there are no epics yet', async () => {
+      const { render, el } = setup(configured);
+      await render();
+      expect(section(el).textContent).toContain('Capas por componente');
+      expect(section(el).textContent).toContain('Todavía no hay épicas');
+      expect(section(el).querySelectorAll('[data-testid="layer-project"]').length).toBe(0);
+    });
+
+    it('lists one block per Jira project key of the epics, sorted, without calling Jira', async () => {
+      const { render, el, calls } = setup(layered);
+      await render();
+      const blocks = Array.from(section(el).querySelectorAll('[data-testid="layer-project"]'));
+      expect(blocks.map((b) => b.querySelector('h4')?.textContent?.trim())).toEqual(['ABC', 'ZED']);
+      expect(section(el).textContent).toContain("Sin capa");
+      expect(calls.some((c) => c.includes('/api/jira/projects/'))).toBeFalse();
+    });
+
+    it('loads the components of a project on demand and shows them with their layer', async () => {
+      const { page, render, el, calls } = setup({
+        ...layered,
+        jira: { ...configured.jira, componentLayers: [{ projectKey: 'ABC', componentId: '11', componentName: 'FRONTEND', layer: 'frontend' }] },
+      });
+      await render();
+      await page.loadComponents('ABC');
+      await render();
+
+      expect(calls).toContain('GET /api/jira/projects/ABC/components');
+      const selects = Array.from(section(el).querySelectorAll('select')) as HTMLSelectElement[];
+      expect(selects.map((s) => s.getAttribute('aria-label'))).toEqual([
+        'Capa para BACKEND (ABC)',
+        'Capa para FRONTEND (ABC)',
+      ]);
+      expect(selects.map((s) => s.value)).toEqual(['', 'frontend']);
+    });
+
+    it('saves the chosen layer through the editor (setComponentLayer) and removes it with "—"', async () => {
+      const { page, render, stored } = setup(layered);
+      await render();
+      await page.loadComponents('ABC');
+      await page.setComponentLayer('ABC', { id: '10', name: 'BACKEND' }, 'backend');
+      expect(stored().jira.componentLayers).toEqual([
+        { projectKey: 'ABC', componentId: '10', componentName: 'BACKEND', layer: 'backend' },
+      ]);
+      await page.setComponentLayer('ABC', { id: '10', name: 'BACKEND' }, '');
+      expect(stored().jira.componentLayers).toEqual([]);
+    });
+
+    it('saving a layer keeps unsaved status-mapping edits on the same screen', async () => {
+      const { page, render } = setup(layered);
+      await render();
+      page.overrides.set({ '3': 'done' });
+      await page.setComponentLayer('ABC', { id: '10', name: 'BACKEND' }, 'backend');
+      await render();
+      expect(page.overrides()).toEqual({ '3': 'done' });
+    });
+
+    it('shows the load error in Spanish with its code', async () => {
+      const { page, render, el } = setup({ ...layered, componentsFail: true });
+      await render();
+      await page.loadComponents('ABC');
+      await render();
+      expect(section(el).textContent).toContain('No se pudieron leer los componentes');
+      expect(section(el).textContent).toContain('UNREACHABLE');
+    });
   });
 });

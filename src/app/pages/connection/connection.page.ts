@@ -9,7 +9,8 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { setJiraConnection, setJiraParticularities } from '../../../../shared/config-edit.mjs';
+import { setComponentLayer, setJiraConnection, setJiraParticularities } from '../../../../shared/config-edit.mjs';
+import { componentLayerRows } from '../../../../shared/config-view.mjs';
 import { ConfigEditor } from '../../core/config-editor';
 import { idle, track, type Op } from '../../core/op';
 import { ProxyClient } from '../../core/proxy-client';
@@ -30,6 +31,14 @@ interface JiraField {
   name: string;
   custom: boolean;
 }
+
+interface JiraComponent {
+  id: string;
+  name: string;
+}
+type Layer = 'frontend' | 'backend' | 'functional';
+
+export const LAYER_LABEL: Record<Layer, string> = { frontend: 'Frontend', backend: 'Backend', functional: 'Funcional' };
 
 export const CATEGORY_LABEL: Record<Category, string> = { todo: 'Por hacer', doing: 'En curso', done: 'Hecho' };
 
@@ -110,15 +119,30 @@ export class ConnectionPage {
   // Particularities.
   readonly epicLinkMode = linkedSignal<EpicLinkMode>(() => this.config()?.jira.epicLinkMode ?? 'auto');
   readonly epicLinkFieldId = linkedSignal(() => this.config()?.jira.epicLinkFieldId ?? '');
-  readonly overrides = linkedSignal<Record<string, Category>>(() => ({
-    ...(this.config()?.jira.statusCategoryOverrides ?? {}),
-  }));
+  /**
+   * Saved overrides compared by content: any config reload (e.g. saving a component layer) builds
+   * a new object, and an identity change would reset the unsaved draft below.
+   */
+  readonly #savedOverrides = computed<Record<string, Category>>(
+    () => ({ ...(this.config()?.jira.statusCategoryOverrides ?? {}) }),
+    { equal: (a, b) => JSON.stringify(a) === JSON.stringify(b) },
+  );
+  readonly overrides = linkedSignal<Record<string, Category>>(() => ({ ...this.#savedOverrides() }));
   readonly linkHint = computed(() => LINK_MODES.find((m) => m.value === this.epicLinkMode())?.hint ?? '');
   readonly statusesOp = signal<Op<JiraStatus[]>>(idle());
   readonly fieldsOp = signal<Op<JiraField[]>>(idle());
   readonly statuses = computed(() => this.statusesOp().data ?? []);
   readonly customFields = computed(() => (this.fieldsOp().data ?? []).filter((f) => f.custom));
   readonly saving = signal(false);
+
+  // Component layers (sprint report): one block per Jira project key, components loaded on demand.
+  readonly layerLabel = LAYER_LABEL;
+  readonly layers = Object.keys(LAYER_LABEL) as Layer[];
+  readonly layerRows = computed(() => {
+    const config = this.config();
+    return config ? componentLayerRows(config) : [];
+  });
+  readonly componentOps = signal<Record<string, Op<JiraComponent[]>>>({});
 
   constructor() {
     void this.#store.loadConfig();
@@ -188,6 +212,33 @@ export class ConnectionPage {
       track(this.statusesOp, () => this.#proxy.get<JiraStatus[]>('/api/jira/statuses')),
       track(this.fieldsOp, () => this.#proxy.get<JiraField[]>('/api/jira/fields')),
     ]);
+  }
+
+  /** Components of one Jira project, for its layer selects. */
+  async loadComponents(projectKey: string): Promise<void> {
+    const op = signal<Op<JiraComponent[]>>(idle());
+    const publish = () => this.componentOps.update((all) => ({ ...all, [projectKey]: op() }));
+    const pending = track(op, () =>
+      this.#proxy.get<JiraComponent[]>(`/api/jira/projects/${encodeURIComponent(projectKey)}/components`),
+    );
+    publish();
+    await pending;
+    publish();
+  }
+
+  /** The layer a component is mapped to, or `''`. */
+  layerOf(projectKey: string, componentId: string): Layer | '' {
+    const entry = this.config()?.jira.componentLayers.find(
+      (l) => l.projectKey === projectKey && l.componentId === componentId,
+    );
+    return entry?.layer ?? '';
+  }
+
+  /** Saves one mapping right away; `''` removes it (the component goes to "Sin capa"). */
+  async setComponentLayer(projectKey: string, component: JiraComponent, layer: Layer | ''): Promise<void> {
+    await this.#editor.apply((c) =>
+      setComponentLayer(c, { projectKey, componentId: component.id, componentName: component.name }, layer || null),
+    );
   }
 
   /** `''` removes the override: the status keeps the category Jira gives it. */

@@ -47,6 +47,7 @@ interface AppConfig {
     timeoutMs: number;                     // default 15000
     maxRetries: number;                    // default 3
     statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'>;  // por statusId
+    componentLayers: Array<{ projectKey: string; componentId: string; componentName: string; layer: 'frontend' | 'backend' | 'functional' }>;  // capa por componente de Jira (informe de cierre)
   };
   settings: {
     staleBusinessDays: number;             // default 5

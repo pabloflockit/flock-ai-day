@@ -312,6 +312,7 @@ test('exposes only the whitelisted endpoint functions', () => {
     'issueChangelog',
     'issueTypes',
     'myself',
+    'projectComponents',
     'searchJql',
     'searchJqlPages',
     'serverInfo',
@@ -319,4 +320,38 @@ test('exposes only the whitelisted endpoint functions', () => {
     'user',
     'userSearch',
   ]);
+});
+
+test('projectComponents reads the project components, maps to { id, name } sorted by name and caches', async () => {
+  const { client, calls } = setup({
+    responses: [
+      json([
+        { self: 'x', id: '3', name: 'Órdenes', projectId: 1 },
+        { self: 'x', id: '1', name: 'backend', projectId: 1 },
+        { self: 'x', id: 2, name: 'Alfa', projectId: 1 },
+      ]),
+      json([{ id: '9', name: 'Other' }]),
+    ],
+  });
+  const list = await client.projectComponents('ABC');
+  assert.deepEqual(list, [
+    { id: '2', name: 'Alfa' },
+    { id: '1', name: 'backend' },
+    { id: '3', name: 'Órdenes' },
+  ]);
+  assert.equal(new URL(calls[0].url).pathname, '/rest/api/3/project/ABC/components');
+  assert.equal(calls[0].init.method ?? 'GET', 'GET');
+  await client.projectComponents('ABC');
+  assert.equal(calls.length, 1);
+  assert.deepEqual(await client.projectComponents('XYZ'), [{ id: '9', name: 'Other' }]);
+  assert.equal(calls.length, 2);
+});
+
+test('projectComponents validates the project key and tolerates a non-array answer', async () => {
+  const { client, calls } = setup({ responses: [json({ unexpected: true })] });
+  for (const bad of ['', 'a/b', 'ABC-1', '../x', undefined]) {
+    await assert.rejects(client.projectComponents(bad), code('VALIDATION_ERROR'), String(bad));
+  }
+  assert.equal(calls.length, 0);
+  assert.deepEqual(await client.projectComponents('ABC'), []);
 });

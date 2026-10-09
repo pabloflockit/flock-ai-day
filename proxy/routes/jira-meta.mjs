@@ -1,4 +1,4 @@
-import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN } from '../../shared/contracts.mjs';
+import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN, JIRA_PROJECT_KEY_PATTERN } from '../../shared/contracts.mjs';
 import { requireJira } from './connection.mjs';
 
 const MIN_QUERY_CHARS = 2;
@@ -57,6 +57,15 @@ export function registerJiraMetaRoutes(router) {
         displayName: u.displayName,
         emailAddress: typeof u.emailAddress === 'string' && u.emailAddress ? u.emailAddress : null,
       }));
+  });
+
+  router.add('GET', '/api/jira/projects/:key/components', async ({ params, deps }) => {
+    const jira = requireJira(deps);
+    const key = params?.key ?? '';
+    if (!JIRA_PROJECT_KEY_PATTERN.test(key)) {
+      throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'La clave del proyecto de Jira no es válida.');
+    }
+    return jira.projectComponents(key);
   });
 
   router.add('GET', '/api/jira/epics/:key', async ({ params, deps }) => {

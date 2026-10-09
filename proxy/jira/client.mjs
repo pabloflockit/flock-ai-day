@@ -1,4 +1,4 @@
-import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
+import { ApiError, ERROR_CODES, JIRA_PROJECT_KEY_PATTERN } from '../../shared/contracts.mjs';
 import { validateJiraUrl } from '../../shared/jira-url.mjs';
 
 /**
@@ -354,6 +354,23 @@ export function createJiraClient({
     fields: async () => cached('field', () => request({ path: '/rest/api/3/field' })),
     statuses: async () => cached('status', () => request({ path: '/rest/api/3/status' })),
     issueTypes: async () => cached('issuetype', () => request({ path: '/rest/api/3/issuetype' })),
+    /**
+     * Components of a Jira project (plain array, not paginated) as `{ id, name }`, sorted by name.
+     * @param {string} projectKey
+     * @returns {Promise<{ id: string, name: string }[]>}
+     */
+    async projectComponents(projectKey) {
+      if (typeof projectKey !== 'string' || !JIRA_PROJECT_KEY_PATTERN.test(projectKey)) {
+        throw invalid('Invalid project key.');
+      }
+      return cached(`components:${projectKey}`, async () => {
+        const list = await request({ path: `/rest/api/3/project/${encodeURIComponent(projectKey)}/components` });
+        return (Array.isArray(list) ? list : [])
+          .filter((c) => c && (typeof c.id === 'string' || typeof c.id === 'number') && typeof c.name === 'string')
+          .map((c) => ({ id: String(c.id), name: c.name }))
+          .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+      });
+    },
     clearMetadataCache: () => metadata.clear(),
 
     /**

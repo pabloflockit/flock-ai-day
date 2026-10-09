@@ -111,3 +111,12 @@ test('key changes with active epics, measure field, link mode and link field', (
     seen.add(key);
   }
 });
+
+test('the dataset cache key does not move with the component layers (rows carry every component)', () => {
+  const before = keyOf(config());
+  const c = config();
+  c.jira.componentLayers = [{ projectKey: 'E', componentId: '1', componentName: 'FE', layer: 'frontend' }];
+  assert.equal(keyOf(c), before);
+  c.jira.componentLayers.push({ projectKey: 'E', componentId: '2', componentName: 'BE', layer: 'backend' });
+  assert.equal(keyOf(c), before);
+});

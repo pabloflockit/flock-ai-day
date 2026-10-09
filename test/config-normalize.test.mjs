@@ -14,6 +14,7 @@ test('defaults for an empty or garbage input', () => {
         timeoutMs: 15000,
         maxRetries: 3,
         statusCategoryOverrides: {},
+        componentLayers: [],
       },
       settings: {
         staleBusinessDays: 5,
@@ -119,4 +120,39 @@ test('a valid jira.baseUrl is stored as its canonical origin; an invalid one is 
   assert.equal(normalizeConfig({ jira: { baseUrl: 'http://acme.atlassian.net' } }).jira.baseUrl, 'http://acme.atlassian.net');
   const once = normalizeConfig({ jira: { baseUrl: 'https://ACME.atlassian.net/' } });
   assert.deepEqual(normalizeConfig(once), once);
+});
+
+test('componentLayers: defaults to [] and keeps well-formed entries (project key upper-cased)', () => {
+  assert.deepEqual(normalizeConfig({}).jira.componentLayers, []);
+  assert.deepEqual(
+    normalizeConfig({
+      jira: { componentLayers: [{ projectKey: ' abc ', componentId: ' 10 ', componentName: ' FRONTEND ', layer: 'frontend' }] },
+    }).jira.componentLayers,
+    [{ projectKey: 'ABC', componentId: '10', componentName: 'FRONTEND', layer: 'frontend' }],
+  );
+});
+
+test('componentLayers: drops malformed entries; same project + component: last wins', () => {
+  const entry = (extra) => ({ projectKey: 'ABC', componentId: '1', componentName: 'X', layer: 'backend', ...extra });
+  const layers = normalizeConfig({
+    jira: {
+      componentLayers: [
+        entry({ layer: 'frontend' }),
+        entry({ projectKey: '' }),
+        entry({ componentId: '  ' }),
+        entry({ componentId: 7 }),
+        entry({ layer: 'qa' }),
+        entry({ layer: undefined }),
+        null,
+        'x',
+        entry({ componentId: '2', componentName: undefined }),
+        entry({ layer: 'functional' }),
+      ],
+    },
+  }).jira.componentLayers;
+  assert.deepEqual(layers, [
+    { projectKey: 'ABC', componentId: '1', componentName: 'X', layer: 'functional' },
+    { projectKey: 'ABC', componentId: '2', componentName: '', layer: 'backend' },
+  ]);
+  assert.deepEqual(normalizeConfig({ jira: { componentLayers: 'nope' } }).jira.componentLayers, []);
 });

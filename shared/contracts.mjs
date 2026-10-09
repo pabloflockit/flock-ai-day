@@ -14,6 +14,12 @@
 /** Shape of a Jira issue key (also the key of an epic). */
 export const ISSUE_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
 
+/** Shape of a Jira project key (upper-case; the prefix of an issue key). */
+export const JIRA_PROJECT_KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+
+/** The report layers a Jira component can be mapped to. */
+export const COMPONENT_LAYERS = Object.freeze(['frontend', 'backend', 'functional']);
+
 /** Error codes returned by the proxy. Extended by later tasks. */
 export const ERROR_CODES = Object.freeze({
   NOT_FOUND: 'NOT_FOUND',

@@ -11,6 +11,32 @@
  */
 
 /**
+ * Jira project key of an issue key (`ABC-12` -> `ABC`), upper-case.
+ * @param {string} issueKey
+ */
+export function jiraProjectKey(issueKey) {
+  const key = issueKey.trim().toUpperCase();
+  const dash = key.lastIndexOf('-');
+  return dash < 0 ? key : key.slice(0, dash);
+}
+
+/**
+ * One row per Jira project key found in ANY configured epic (active or not, in any project),
+ * sorted, with the component -> layer mappings stored for it. Mappings of keys that no epic uses
+ * any more stay in the config but are not listed.
+ * @param {AppConfig} config
+ */
+export function componentLayerRows(config) {
+  const keys = new Set(config.projects.flatMap((p) => p.epics.map((e) => jiraProjectKey(e.key))));
+  return [...keys]
+    .sort((a, b) => a.localeCompare(b, 'es'))
+    .map((projectKey) => ({
+      projectKey,
+      mappings: config.jira.componentLayers.filter((l) => l.projectKey === projectKey),
+    }));
+}
+
+/**
  * Avatar initials: first letter of the first and last word. `?` when there is no name.
  * @param {string} name
  */

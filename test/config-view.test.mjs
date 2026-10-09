@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeConfig } from '../proxy/config/normalize.mjs';
-import { epicSyncRows, initials, measureFields, teamSummaries, userSearchHits } from '../shared/config-view.mjs';
+import { componentLayerRows, epicSyncRows, initials, jiraProjectKey, measureFields, teamSummaries, userSearchHits } from '../shared/config-view.mjs';
 
 const member = (accountId, extra = {}) => ({ accountId, displayName: `User ${accountId}`, ...extra });
 const config = () =>
@@ -85,4 +85,31 @@ test('epicSyncRows joins each epic with its shard meta: ok, failed or never sync
       ['never', null, null],
     ],
   );
+});
+
+test('componentLayerRows lists the distinct Jira project keys of ALL epics (sorted) with their mappings', () => {
+  const c = normalizeConfig({
+    jira: {
+      componentLayers: [
+        { projectKey: 'ZED', componentId: '1', componentName: 'FE', layer: 'frontend' },
+        { projectKey: 'ZED', componentId: '2', componentName: 'BE', layer: 'backend' },
+        { projectKey: 'GONE', componentId: '9', componentName: 'Old', layer: 'backend' },
+      ],
+    },
+    teams: [{ id: 't1', name: 'T' }],
+    projects: [
+      { id: 'p1', teamId: 't1', name: 'Uno', epics: [{ key: 'zed-1' }, { key: 'ABC-7', active: false }] },
+      { id: 'p2', teamId: 't1', name: 'Dos', active: false, epics: [{ key: 'ZED-2' }, { key: 'MY_KEY-3' }] },
+    ],
+  });
+  assert.deepEqual(
+    componentLayerRows(c).map((r) => [r.projectKey, r.mappings.map((m) => m.componentId)]),
+    [['ABC', []], ['MY_KEY', []], ['ZED', ['1', '2']]],
+  );
+  assert.deepEqual(componentLayerRows(normalizeConfig({})), []);
+});
+
+test('jiraProjectKey takes the project part of an issue key', () => {
+  assert.equal(jiraProjectKey(' abc-12 '), 'ABC');
+  assert.equal(jiraProjectKey('A_B-1'), 'A_B');
 });
