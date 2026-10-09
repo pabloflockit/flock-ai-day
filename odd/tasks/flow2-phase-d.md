@@ -4,7 +4,7 @@ Goal: close flow 2, phase D of `docs/plan.md` §9 — deterministic sprint and c
 templates over a date range (default: last 2 weeks), preview in the app, copy to the clipboard (`copyText`) and save
 as `.md` (`saveMarkdown`) through the existing preload bridge.
 
-Source of truth: `docs/plan.md` §8.1, §9 (private, local only) and `docs/architecture.md` §4.1, §9.
+Source of truth: `docs/plan.md` §8.1, §9 and `docs/architecture.md` §4.1, §9.
 Branch: `main` (user decision: one Conventional Commit per task, pushed right away).
 Safety: run node/npm/electron with every `JIRA_*` var unset; reports never reach Jira or the AI provider (AI drafting
 is plan §8.2, out of scope).
@@ -49,7 +49,8 @@ the dashboard.
   `build:desktop` OK. No screenshot. Incident: the worker printed the shell environment (incl. `JIRA_API_TOKEN`,
   `NPM_TOKEN`) into its tool output by mistake; nothing written to the repo (checked), user advised to rotate.
   Commit: `feat(dashboard): add sprint and client report preview with copy and save`.
-- Task 3: demo smoke via CDP (`flock-smokeeports.mjs`, outside the repo): sprint and client modals render; client
+- Task 3: demo smoke via CDP (`flock-smoke
+eports.mjs`, outside the repo): sprint and client modals render; client
   Markdown has none of the demo member names ("Ana Demo", "Ben Demo", "Former Demo") nor "Sin asignar", "Estancad",
   "Fuera del equipo"; figures equal the dashboard screenshot of phase C ("Demo project" 17 de 35 Story Points (49%),
   4 de 9 tareas, 1 sin Story Points; DEMO-1 38%, DEMO-2 64%); invalid period shows «Desde» > «Hasta» error and hides

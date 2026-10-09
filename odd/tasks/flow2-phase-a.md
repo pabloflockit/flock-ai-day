@@ -3,7 +3,7 @@
 Goal: flow 2, phase A of `docs/plan.md` §9 — Flock Design System base, app shell, connection wizard,
 and the administration screens (teams, members, projects with measurement, epics) over the flow 1 proxy.
 
-Source of truth: `docs/plan.md` §2, §5, §6.1, §9 (private, local only) and `docs/architecture.md`.
+Source of truth: `docs/plan.md` §2, §5, §6.1, §9 and `docs/architecture.md`.
 UI rule: only the `flock-design-system` skill (tokens via CSS variables, system fonts, base-4 spacing,
 components/patterns from `references/design-system.md`; no hex, no external component/icon libraries).
 Branch: `main` (user decision: one Conventional Commit per task, pushed right away).

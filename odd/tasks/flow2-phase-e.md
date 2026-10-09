@@ -4,16 +4,15 @@ Goal: close flow 2, phase E of `docs/plan.md` §9 — README (installation, Atla
 permissions, usage, architecture summary, database security and recovery, decisions, limitations and evolution),
 anonymized fixtures for `--demo` that show every screen, and screenshots for the demo.
 
-Source of truth: `docs/plan.md` §9 and `docs/architecture.md` (both private, local only).
+Source of truth: `docs/plan.md` §9 and `docs/architecture.md`.
 Branch: `main` (user decision: one Conventional Commit per task, pushed right away).
 Safety: every command with all `JIRA_*` vars unset; never list environment variables; demo never reaches Jira.
 
 ## Decisions
 
 - `docs/architecture.md` and `docs/plan.md` get public versions without any reference to the read-only reference
-  project (the reference app, its path, "proyecto anterior" comparisons); the originals move to `docs/private/`
-  (gitignored). Every other the reference app mention is removed from tracked files and `docs/reference-audit.md` is
-  retired from the repo (kept in `docs/private/`). Client data (site name, epic keys) stays as is (user decision).
+  project (its name, its path, comparisons with it); the originals move to `docs/private/` (gitignored). Every other
+  mention is removed from tracked files and the reference audit is retired from the repo (kept in `docs/private/`). Client data (site name, epic keys) stays as is (user decision).
   Git history still contains the old text; rewriting history is not planned. The README links to the public
   `architecture.md` and `decisions.md`.
 - Demo fixtures stay hand-written and fictional (flow 1); they are extended, not re-recorded.
@@ -24,8 +23,8 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
 
 - [x] 1. Demo fixtures — a fictional non-member with open work (F2, "Agregar al equipo" searchable in demo), a To Do
       unit assigned to a member (todo segment), tests and fixture lint green.
-- [ ] 1b. Public docs — sanitized `docs/architecture.md` and `docs/plan.md` tracked; originals and
-      `reference-audit.md` in `docs/private/`; no the reference app / `repoFedPat` left in tracked files.
+- [x] 1b. Public docs — sanitized `docs/architecture.md` and `docs/plan.md` tracked; originals and the
+      reference audit in `docs/private/`; no reference-project mention left in tracked files.
 - [x] 1c. Dashboard refresh after sync — the dashboard must show new data after a sync without a reload.
 - [ ] 2. Screenshots — demo mode, dark and light, into `docs/screenshots/` (dashboard, outside view, drill-down,
       report, teams, sync).
@@ -48,3 +47,10 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
   (TS2339: `invalidateDatasets` missing); the "older read never overwrites a newer refresh" spec passed before and
   after (regression guard). Karma 169/169, node 468/468, `build:desktop` OK.
   Commit: `fix(store): re-read datasets after a sync run`.
+- Task 1b (worker + parent review): private originals copied to `docs/private/` (SHA-256 identical), `.gitignore`
+  now ignores `docs/private/` instead of the two docs; `docs/architecture.md` and `docs/plan.md` rewritten to stand
+  alone (decisions justified on their own; flow 1 estimate restated as 2 h 30 to 3 h); `docs/decisions.md` sections
+  1, 3, 4 and log rows reworded; `odd/tasks/foundation.md` neutralized; reference audit removed from the repo.
+  Parent checks: no tokens, emails, local paths or reference-project names in the public docs; "(private, local
+  only)" notes removed from the phase task docs. Git history still holds the old text (no rewrite, user informed).
+  Commit: `docs: publish architecture and plan without reference-project details`.

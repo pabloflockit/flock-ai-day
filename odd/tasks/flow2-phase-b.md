@@ -4,7 +4,7 @@ Goal: close flow 2, phase B of `docs/plan.md` §9 — `projectIssues` per projec
 subtasks, project measurement fields, `IssueRow` projection), refresh of the sync-maintained fields (members and
 epic data, `architecture.md` §6.7), and `POST /api/sync` over all active projects with progress.
 
-Source of truth: `docs/plan.md` §9 (private, local only) and `docs/architecture.md`.
+Source of truth: `docs/plan.md` §9 and `docs/architecture.md`.
 Branch: `main` (user decision: one Conventional Commit per task, pushed right away).
 Safety: real Jira is reached only read-only by `tools/validate-scope.mjs`, with the user's go-ahead
 ("continuá con el cierre de la phase B"); the app database is opened read-only to read plaintext metadata

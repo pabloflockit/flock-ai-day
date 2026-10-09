@@ -4,7 +4,7 @@ Goal: close flow 2, phase C of `docs/plan.md` §9 — `work-units`, `teamScope`/
 F1–F2 as pure functions with tests, the team dashboard UI with drill-down, the notice for tasks without subtasks,
 and the "Fuera del equipo" screen with "Agregar al equipo".
 
-Source of truth: `docs/plan.md` §3, §4, §6.2, §6.3, §7, §9 (private, local only) and `docs/architecture.md`.
+Source of truth: `docs/plan.md` §3, §4, §6.2, §6.3, §7, §9 and `docs/architecture.md`.
 Branch: `main` (user decision: one Conventional Commit per task, pushed right away).
 Safety: run node/npm/electron with `env -u JIRA_*`; real Jira only read-only and with the user's go-ahead.
 
