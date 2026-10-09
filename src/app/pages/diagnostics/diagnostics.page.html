@@ -198,9 +198,9 @@
         }
         —
         @if (epicDataset().isCurrent) {
-          <span class="badge">Al día</span>
+          <span class="badge is-current">Al día</span>
         } @else {
-          <span class="badge">Desactualizado</span>
+          <span class="badge is-stale">Desactualizado</span>
         }
       </p>
     }
@@ -214,6 +214,7 @@
     }
 
     @if (rows().length > 0) {
+      <div class="table-wrap">
       <table>
         <thead>
           <tr>
@@ -233,14 +234,18 @@
         <tbody>
           @for (item of rows(); track item.row.key) {
             <tr>
-              <td>{{ item.row.key }}</td>
+              <td class="text-mono">{{ item.row.key }}</td>
               <td>{{ item.row.summary }}</td>
               <td>{{ item.row.issueTypeName }}</td>
-              <td>{{ item.row.statusName }} ({{ item.category }})</td>
-              <td>{{ item.row.assigneeName ?? 'Sin asignar' }}</td>
-              <td>{{ item.row.statusSince | instant }}</td>
-              <td>{{ item.row.dueDate | calendarDate }}</td>
               <td>
+                <span class="status-chip cat-{{ item.categoryKey }}">
+                  {{ item.row.statusName }}@if (item.category) { ({{ item.category }})}
+                </span>
+              </td>
+              <td>{{ item.row.assigneeName ?? 'Sin asignar' }}</td>
+              <td class="text-mono">{{ item.row.statusSince | instant }}</td>
+              <td class="text-mono">{{ item.row.dueDate | calendarDate }}</td>
+              <td class="text-mono">
                 @for (measure of item.measures; track measure[0]) {
                   <div>{{ measure[0] }}: {{ measure[1] ?? '—' }}</div>
                 } @empty {
@@ -256,6 +261,7 @@
           }
         </tbody>
       </table>
+      </div>
     } @else if (epicDataset().status === 'ready') {
       <p>No hay filas para esta épica.</p>
     }

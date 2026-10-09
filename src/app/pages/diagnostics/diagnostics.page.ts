@@ -129,11 +129,15 @@ export class DiagnosticsPage {
 
   readonly rows = computed(() => {
     const config = this.config();
-    return this.epicDataset().rows.map((row) => ({
-      row,
-      category: config ? CATEGORY_LABEL[effectiveCategory(row, config)] : '',
-      measures: Object.entries(row.measures),
-    }));
+    return this.epicDataset().rows.map((row) => {
+      const categoryKey = config ? effectiveCategory(row, config) : null;
+      return {
+        row,
+        categoryKey,
+        category: categoryKey ? CATEGORY_LABEL[categoryKey] : '',
+        measures: Object.entries(row.measures),
+      };
+    });
   });
 
   readonly failedShards = computed(() =>

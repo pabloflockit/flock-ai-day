@@ -1,0 +1,61 @@
+/* App-level names for values documented in the Flock Design System v1.1 reference
+   (docs/design/design-system.md). tokens.css is a verbatim copy of the skill and only
+   lists these values in comments or component specs, so they are named here once.
+   Nothing in this file is a new design decision: every value maps to a reference section. */
+:root {
+  /* State triplets — reference §1 "Colores de estado" (bg / fg / bar) */
+  --state-pending-bg:  #f1ecf6;
+  --state-pending-fg:  #6b5a78;
+  --state-pending-bar: #9b8aa8;
+  --state-progress-bg:  #f3e6fb;
+  --state-progress-fg:  #7800C0;
+  --state-progress-bar: #7800C0;
+  --state-blocked-bg:  #fde7ee;
+  --state-blocked-fg:  #be123c;
+  --state-blocked-bar: #e11d48;
+  --state-done-bg:  #dcf7e6;
+  --state-done-fg:  #15803d;
+  --state-done-bar: #16a34a;
+
+  /* Component colors — reference §5 "Botones", "Chips", "Overlays" and §6 "Tabla de datos" */
+  --on-brand: #fff;                              /* text on brand / gradients */
+  --brand-hover: #650aa0;                        /* primary button hover */
+  --accent-hover: #e04800;                       /* accent button hover */
+  --brand-soft-hover: #e9d4f7;                   /* small button hover */
+  --on-brand-light: rgba(255,255,255,.14);       /* light button on brand */
+  --on-brand-light-hover: rgba(255,255,255,.26);
+  --brand-border-faint: rgba(120,0,192,.18);     /* sub-label border */
+  --row-border: #f3eefa;                         /* data table row divider */
+  --overlay-backdrop: rgba(48,8,64,.5);          /* modal backdrop */
+
+  /* Type scale — reference §2 */
+  --fs-display: 30px;
+  --fs-section: 20px;
+  --fs-card-title: 16.5px;
+  --fs-stat: 28px;
+  --fs-body: 14px;
+  --fs-control: 13px;
+  --fs-secondary: 12.5px;
+  --fs-caption: 11px;
+  --fs-chip: 10.5px;
+  --lh-body: 1.45;
+
+  /* Spacing, base 4 — reference §3 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Radius scale — reference §3 and §5 (--radius = 12px lives in tokens.css) */
+  --radius-icon: 6px;
+  --radius-sm: 8px;
+  --radius-btn: 9px;
+  --radius-toast: 10px;
+  --radius-modal: 16px;
+  --radius-feature: 18px;
+  --radius-pill: 20px;
+}

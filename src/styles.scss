@@ -1,1 +1,117 @@
-/* You can add global styles to this file, and also import other style files */
+// Global styles: Flock Design System v1.1 (docs/design/design-system.md).
+// Only tokens through CSS variables; tokens.css is a verbatim skill copy.
+@use 'styles/flock/tokens';
+@use 'styles/flock/tokens-app';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+// Canvas tint; cards and panels always sit on --panel (reference §1 separation rule).
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--brand-softer);
+}
+
+// Type scale — reference §2.
+h1 {
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-display);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--brand-dark);
+}
+
+h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--fs-section);
+  font-weight: 700;
+  color: var(--brand-dark);
+}
+
+h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-card-title);
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--brand-dark);
+}
+
+p {
+  margin: 0 0 var(--space-3);
+}
+
+a {
+  color: var(--brand);
+}
+
+// Buttons — reference §5 base rule; primary is the default variant.
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px var(--space-4);
+  border: none;
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: var(--fs-control);
+  font-weight: 600;
+  color: var(--on-brand);
+  background: var(--brand);
+  cursor: pointer;
+  transition: transform 0.06s, background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: var(--brand-hover);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+}
+
+// Form fields — reference §5.
+label {
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+}
+
+input,
+select,
+textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: var(--fs-control);
+  color: var(--text);
+  background: var(--panel);
+
+  &:focus {
+    outline: 2px solid var(--brand-soft);
+    border-color: var(--brand);
+  }
+}
+
+[role='alert'] {
+  color: var(--state-blocked-fg);
+}
