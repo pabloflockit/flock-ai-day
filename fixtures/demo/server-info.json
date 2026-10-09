@@ -1,0 +1,8 @@
+{
+  "baseUrl": "https://demo.example.atlassian.net",
+  "version": "1001.0.0-demo",
+  "versionNumbers": [1001, 0, 0],
+  "deploymentType": "Cloud",
+  "buildNumber": 100,
+  "serverTitle": "Demo Jira"
+}

@@ -15,7 +15,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { createBridgeHandlers } = require('./bridge-handlers.cjs');
-const { createSecrets } = require('./secrets.cjs');
+const { createDemoSecrets, createSecrets } = require('./secrets.cjs');
 const {
   APP_ORIGIN,
   APP_PROTOCOL,
@@ -50,6 +50,12 @@ function isDevMode() {
   return process.argv.includes('--dev');
 }
 
+// `--demo`: fictional Jira fixtures, a separate database and a dummy token (see decisions.md).
+// Combine with `--dev` (`desktop:dev:demo`) to use the dev server.
+function isDemoMode() {
+  return process.argv.includes('--demo');
+}
+
 const getAppOrigin = () => (isDevMode() ? DEV_ORIGIN : APP_ORIGIN);
 
 function getRendererUrl() {
@@ -60,16 +66,18 @@ function getRendererUrl() {
 // opened the database they answer "nothing configured" (empty allowlist, fail-closed).
 let jiraEndpoint = { getJiraBaseUrl: () => null, getAllowedHosts: () => [] };
 const getJiraBaseUrl = () => jiraEndpoint.getJiraBaseUrl();
-const getAllowedHosts = () => jiraEndpoint.getAllowedHosts();
+// Demo egress is pinned to the fictional host; the stored config is not consulted.
+let demoHosts = null;
+const getAllowedHosts = () => demoHosts ?? jiraEndpoint.getAllowedHosts();
 
 const DB_FILE_NAME = 'leadership-panel.db';
 
 // Dev and packaged databases live in different places on purpose: `.cache/` in the repo for
 // `--dev`, `userData` when packaged. Switching modes therefore looks like data loss.
+// Demo mode uses a `demo` subdirectory in both places, so it never touches the real database.
 function getDbPath() {
-  return isDevMode()
-    ? path.join(__dirname, '..', '.cache', DB_FILE_NAME)
-    : path.join(app.getPath('userData'), DB_FILE_NAME);
+  const base = isDevMode() ? path.join(__dirname, '..', '.cache') : app.getPath('userData');
+  return isDemoMode() ? path.join(base, 'demo', DB_FILE_NAME) : path.join(base, DB_FILE_NAME);
 }
 
 /** @type {{ close(): void } | undefined} */
@@ -77,7 +85,7 @@ let dbHandle;
 
 // The proxy runs in the main process. The port is the first free one from 3100, so the
 // renderer cannot hardcode it; createMainWindow hands it over through the preload.
-async function startProxy(secrets) {
+async function startProxy(secrets, demo) {
   const proxyDir = path.join(__dirname, '..', 'proxy');
   const load = (file) => import(pathToFileURL(path.join(proxyDir, file)).toString());
   const { findAvailablePort } = await load('find-available-port.mjs');
@@ -94,8 +102,14 @@ async function startProxy(secrets) {
   dbHandle = handle;
   const configStore = createConfigStore({ handle, getDataKey: () => secrets.getDataKey() });
   jiraEndpoint = createJiraEndpoint(configStore);
+  if (demo) demo.seedDemoConfig({ handle, configStore }); // first start only
   // One guarded fetch for every outbound call: the Jira client never sees the global fetch.
-  const guardedFetch = createGuardedFetch({ fetchImpl: globalThis.fetch, getAllowedHosts });
+  // Demo: the fixture fetch sits beneath the same guard, so the allowlist still applies.
+  if (demo) demoHosts = [demo.DEMO_HOST];
+  const guardedFetch = createGuardedFetch({
+    fetchImpl: demo ? demo.createDemoFetch() : globalThis.fetch,
+    getAllowedHosts,
+  });
   const jira = createJiraClient({
     getConfig: () => configStore.load(),
     secrets,
@@ -188,7 +202,7 @@ function createMainWindow() {
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    title: APP_NAME,
+    title: isDemoMode() ? `${APP_NAME} (demo)` : APP_NAME,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -210,13 +224,23 @@ app.setName(APP_NAME);
 app.whenReady().then(async () => {
   try {
     // Fails here, before anything else, when the OS cannot encrypt: there is no plaintext fallback.
-    const secrets = createSecrets({
-      safeStorage,
-      fs,
-      dir: app.getPath('userData'),
-    });
+    const demo = isDemoMode()
+      ? await import(pathToFileURL(path.join(__dirname, '..', 'fixtures', 'demo', 'index.mjs')).toString())
+      : null;
+    const secrets = demo
+      ? createDemoSecrets({
+          safeStorage,
+          fs,
+          dir: path.join(app.getPath('userData'), 'demo'),
+          jiraToken: demo.DEMO_TOKEN,
+        })
+      : createSecrets({
+          safeStorage,
+          fs,
+          dir: app.getPath('userData'),
+        });
     secrets.getDataKey(); // generated on first start
-    await startProxy(secrets);
+    await startProxy(secrets, demo);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     dialog.showErrorBox(

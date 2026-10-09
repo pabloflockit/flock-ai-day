@@ -1,0 +1,8 @@
+{
+  "accountId": "demo-account-001",
+  "accountType": "atlassian",
+  "active": true,
+  "displayName": "Ana Demo",
+  "emailAddress": "ana.demo@example.com",
+  "timeZone": "UTC"
+}

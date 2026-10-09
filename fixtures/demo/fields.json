@@ -1,0 +1,8 @@
+[
+  { "id": "summary", "name": "Summary", "custom": false, "schema": { "type": "string", "system": "summary" } },
+  { "id": "status", "name": "Status", "custom": false, "schema": { "type": "status", "system": "status" } },
+  { "id": "timeoriginalestimate", "name": "Original estimate", "custom": false, "schema": { "type": "number", "system": "timeoriginalestimate" } },
+  { "id": "customfield_10014", "name": "Epic Link", "custom": true, "schema": { "type": "any", "custom": "com.pyxis.greenhopper.jira:gh-epic-link", "customId": 10014 } },
+  { "id": "customfield_10016", "name": "Story Points", "custom": true, "schema": { "type": "number", "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float", "customId": 10016 } },
+  { "id": "customfield_10017", "name": "Team Notes", "custom": true, "schema": { "type": "string", "custom": "com.atlassian.jira.plugin.system.customfieldtypes:textfield", "customId": 10017 } }
+]

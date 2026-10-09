@@ -1,0 +1,9 @@
+[
+  { "id": "10000", "name": "Epic", "hierarchyLevel": 1, "subtask": false },
+  { "id": "10001", "name": "Story", "hierarchyLevel": 0, "subtask": false },
+  { "id": "10002", "name": "Task", "hierarchyLevel": 0, "subtask": false },
+  { "id": "10003", "name": "Bug", "hierarchyLevel": 0, "subtask": false },
+  { "id": "10004", "name": "Sub-task", "hierarchyLevel": -1, "subtask": true },
+  { "id": "10005", "name": "Improvement", "hierarchyLevel": 0, "subtask": false },
+  { "id": "10006", "name": "Improvement", "hierarchyLevel": 0, "subtask": false }
+]

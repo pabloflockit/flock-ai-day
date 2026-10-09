@@ -1,0 +1,30 @@
+[
+  {
+    "accountId": "demo-account-001",
+    "accountType": "atlassian",
+    "active": true,
+    "displayName": "Ana Demo",
+    "emailAddress": "ana.demo@example.com"
+  },
+  {
+    "accountId": "demo-account-002",
+    "accountType": "atlassian",
+    "active": true,
+    "displayName": "Ben Demo",
+    "emailAddress": "ben.demo@example.com"
+  },
+  {
+    "accountId": "demo-account-003",
+    "accountType": "atlassian",
+    "active": false,
+    "displayName": "Carla Demo (inactive)",
+    "emailAddress": null
+  },
+  {
+    "accountId": "demo-account-004",
+    "accountType": "app",
+    "active": true,
+    "displayName": "Demo Automation",
+    "emailAddress": null
+  }
+]

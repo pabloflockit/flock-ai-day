@@ -100,4 +100,23 @@ function createSecrets({ safeStorage, fs, dir, randomBytes = nodeCrypto.randomBy
   };
 }
 
-module.exports = { createSecrets };
+/**
+ * Secrets for `--demo`. The Jira token is a fixed dummy that only exists in memory: setting a
+ * token or an AI key is accepted and discarded, and nothing but the data key is ever written.
+ * The data key is real (same `safeStorage` path as production) but `dir` must be a demo-only
+ * directory (`<userData>/demo`), so demo data never shares a key file with the real database.
+ *
+ * @param {Parameters<typeof createSecrets>[0] & { jiraToken: string }} deps
+ */
+function createDemoSecrets({ jiraToken, ...deps }) {
+  const real = createSecrets(deps);
+  return {
+    getJiraToken: () => jiraToken,
+    setJiraToken: () => {},
+    getAiKey: () => null,
+    setAiKey: () => {},
+    getDataKey: real.getDataKey,
+  };
+}
+
+module.exports = { createSecrets, createDemoSecrets };

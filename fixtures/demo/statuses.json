@@ -1,0 +1,7 @@
+[
+  { "id": "1", "name": "To Do", "statusCategory": { "id": 2, "key": "new", "name": "To Do" } },
+  { "id": "2", "name": "In Progress", "statusCategory": { "id": 4, "key": "indeterminate", "name": "In Progress" } },
+  { "id": "3", "name": "In Review", "statusCategory": { "id": 4, "key": "indeterminate", "name": "In Progress" } },
+  { "id": "4", "name": "Done", "statusCategory": { "id": 3, "key": "done", "name": "Done" } },
+  { "id": "5", "name": "Blocked", "statusCategory": { "id": 4, "key": "indeterminate", "name": "In Progress" } }
+]

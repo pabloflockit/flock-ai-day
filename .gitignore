@@ -33,3 +33,6 @@ Thumbs.db
 # Angular / TypeScript build output
 out-tsc/
 *.tsbuildinfo
+
+# Template with variable names only (no values)
+!.env.example

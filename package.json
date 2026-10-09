@@ -9,6 +9,8 @@
     "build:desktop": "ng build --base-href ./",
     "desktop": "npm run build:desktop && electron .",
     "desktop:dev": "concurrently -k -n ng,electron \"ng serve\" \"wait-on tcp:4200 && electron . --dev\"",
+    "desktop:demo": "npm run build:desktop && electron . --demo",
+    "desktop:dev:demo": "concurrently -k -n ng,electron \"ng serve\" \"wait-on tcp:4200 && electron . --dev --demo\"",
     "test:node": "node --test \"test/**/*.test.mjs\""
   },
   "prettier": {
