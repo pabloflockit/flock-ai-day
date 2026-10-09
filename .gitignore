@@ -1,0 +1,31 @@
+# Private planning docs
+docs/architecture.md
+docs/plan.md
+
+# Local agent tooling
+.atl/
+
+# Secrets (dev only; never commit tokens or API keys)
+.env
+.env.*
+
+# Local SQLite cache (dev database, demo database)
+.cache/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Dependencies and build output
+node_modules/
+dist/
+out/
+release/
+.angular/
+coverage/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
