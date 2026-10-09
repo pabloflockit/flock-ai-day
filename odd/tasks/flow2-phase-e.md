@@ -65,6 +65,6 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
   evolution incl. the planned layered sprint report, layout, testing). Parent fixes: removed an unverifiable claim
   about Electron's embedded Node; "Integrantes" marked as a team tab. All relative links resolve; no client data.
   Commit: `docs: rewrite README for the delivered app`.
-- Task 4: no code changed since `bf7d5d6` (last verified: node 468/468, Karma 169/169, `build:desktop` OK), so the
+- Task 4: no code changed since `b1d854a` (last verified: node 468/468, Karma 169/169, `build:desktop` OK), so the
   suites were not re-run. `docs/decisions.md` entry "Flow 2 phase E close". Flow 2 (phases A–E) closed.
   Commit: `docs: close flow 2`.

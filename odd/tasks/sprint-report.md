@@ -1,6 +1,6 @@
 # Feature: sprint-report (layered sprint close report)
 
-Status: CLOSED 2026-10-09 (pending the user's check against the real instance). Branch: `main`, one commit per task, pushed.
+Status: CLOSED 2026-10-09. Pending only the user's live checks listed at the end. Branch: `main`, one commit per task, pushed.
 
 Goal: a "Sprint close" report like the reference HTML the user shared (a team's sprint close: work with real status
 movement in the period, split by layer — Frontend, Backend, functional follow-up — and by issue level, grouped by
@@ -58,7 +58,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       (validated in main, `.html` only).
 - [x] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
 - [x] 6a. Demo coverage: components mapped to layers, blocked statuses, hygiene cases (parallel with task 7).
-- [ ] 6b. Close: merge task 7, docs, README, decisions, final demo smoke.
+- [x] 6b. Close: merge task 7, docs, README, decisions, screenshots, final demo smoke.
 - [x] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
       plan §8.2.
 
@@ -101,7 +101,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   DEMO-28 (no epic). Docs: `docs/architecture.md` §7, `docs/plan.md` §2.3. RED observed (missing module, route 400s,
   demo clauses). node 503/503, `build:desktop` OK; Karma not run (no front change).
   Membership is by CURRENT assignee (an issue reassigned away from a member is not in the dataset).
-  Commit: `feat(jira): add the memberIssues dataset for the sprint report` (3cf0c5e).
+  Commit: `feat(jira): add the memberIssues dataset for the sprint report` (85d9f3a).
 - Task 4 (parent, inline, same subagent incident): `shared/domain/sprint-close.mjs` `buildSprintClose({ teamId, config,
   period, timeZone, statuses, blockedStatusIds, epicRows, memberRows })` -> `{ period, kpis, layers, outside, hygiene }`.
   Transition categories from the `/api/jira/statuses` catalog with the overrides applied; layers via
@@ -131,7 +131,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   "Exportar HTML" via `saveHtml`. Store: `memberIssues` source keyed by `since`, `refreshProjectIssues`.
   Demo smoke (verifier, CDP, screenshots in %TEMP%/flock-smoke): after a full sync 14 moved items (10/4, 6 closed),
   2 outside (DEMO-25), preview OK, invalid range message OK, 0 console errors. BUG found: project rows cached
-  before 737ab11 lack `statusChanges`/`components` -> `buildSprintClose` threw and the page was blank, and
+  before 247da2b lack `statusChanges`/`components` -> `buildSprintClose` threw and the page was blank, and
   "Actualizar datos" only refreshed member rows. Fix: the model tolerates missing arrays, "Actualizar datos" also
   refreshes the team's projects (the proxy upgrades the payload-version mismatch to a full load) and a warning
   asks to refresh when legacy rows are present. RED observed (domain TypeError; store compile error). node
@@ -146,7 +146,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   `test/demo-sprint-close.test.mjs` runs the real client over the demo fetch -> `buildSprintClose` ->
   `renderSprintCloseHtml`. RED observed (no layers). node 550/550.
   Commit: `test(demo): cover every sprint close feature in the demo`.
-- Task 7 (worker, worktree `feat/sprint-close-ai`, commit baaef71, merged into main with `--no-ff` 6bd5a54):
+- Task 7 (worker, worktree `feat/sprint-close-ai`, commit 9570012, merged into main with `--no-ff` 1cea9aa):
   `shared/domain/ai-narrative.mjs` (`narrativeInput` without people, `checkNarrativeFigures`, `parseNarrative`),
   `proxy/ai/{prompt,anthropic,demo-narrative}.mjs`, `POST /api/reports/ai` (AI enabled + key stored; Anthropic
   `/v1/messages`, model `claude-sonnet-4-5`; stable error codes; key never echoed), egress to `api.anthropic.com` only
@@ -154,3 +154,24 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   "Redactar con IA" with confirmation, editable result, figures warning; narrative block in the exported HTML.
   RED partly reconstructed (renderer block, egress); domain/route/Karma tests written after the code.
   Branch: node 570, Karma 199, build OK. After the merge on main: node 572/572.
+- Task 6b (parent + verifier): README ("Cierre de sprint" and AI rows, usage step 9, demo-mode notes, limitations,
+  evolution), `docs/decisions.md` (report rules, AI design), `docs/architecture.md` (AI route), `docs/plan.md` §8.2
+  marked implemented, screenshots `docs/screenshots/sprint-close-{dark,light,layers}.png` (demo data). Final checks
+  on main: node 572/572, Karma 199/199, `build:desktop` OK; demo smoke with the AI demo narrative, no console
+  errors. Found: a demo database seeded before 6a has no layer mapping (seeding is first-start only), documented.
+- Client-data audit (user request): client identifiers were found in public files and in history (client Jira
+  host, real epic keys, a real team name, the reference app's name and commit hash). Cleaned in HEAD, then the
+  whole history was rewritten (filter-branch, `docs/reference-audit.md` dropped) and force-pushed by the user;
+  0 occurrences in all 64 commits. All commit hashes changed; the hashes quoted in this repository were remapped
+  by commit message. A local backup bundle of the old history exists outside the repo (contains client data).
+
+## Commits (after the history rewrite)
+247da2b IssueRow history + components · 43bf7db component layers · 85d9f3a memberIssues · 9fa5fef sprint close model ·
+1de485f blocked statuses · d8b2be5 HTML renderer + saveHtml · 4e0135e sprint close page · c392163 demo coverage ·
+9570012 AI narrative (merged in 1cea9aa) · e54154b docs · da2beda client identifiers removed · 6c23830 screenshots.
+
+## Pending (user)
+- Map components and blocked statuses on the real instance; compare a real sprint against the reference report.
+- One real "Redactar con IA" call with the stored key (only the offline demo narrative was exercised).
+- Save a file with "Exportar HTML" (native dialog, not automatable here).
+- Ask GitHub Support to purge cached views of the old commits; delete the local backup bundle when satisfied.

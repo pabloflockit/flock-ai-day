@@ -35,5 +35,5 @@ second refresh uses delta.
   2026-10-09T18:11:45.107Z` while `full_fetched_at` stays `2026-10-09T18:02:53.265Z`; all four shards `ok` with
   `lastOkAt` at the new run, `is_current = 1`; `app_config.updated_at` moved to 18:11:47 (sync merge saved). A full
   load advances `full_fetched_at`, so the second refresh was a delta. Exit criterion 2 met.
-- Task 4: `docs/decisions.md` entry "Flow 2 phase B close". No code changed since phase A close (`6ef7214`: node
+- Task 4: `docs/decisions.md` entry "Flow 2 phase B close". No code changed since phase A close (`0c3a70f`: node
   430/430, Karma 123/123, `build:desktop` OK), so suites were not re-run. Commit: see git log `docs: close flow 2 phase B`.
