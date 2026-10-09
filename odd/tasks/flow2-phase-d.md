@@ -29,7 +29,7 @@ the dashboard.
 
 - [x] 1. Reports domain — test-first: period helpers, sprint and client Markdown, no-names test, figures equal M1.
 - [x] 2. Reports UI — dashboard buttons, date range (default last 2 weeks), preview, copy and save via the bridge.
-- [ ] 3. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live check by the user.
+- [x] 3. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live check by the user.
 
 ## Evidence
 - Task 1 (worker, test-first): `shared/domain/reports.mjs` — `defaultPeriod`, `closedInPeriod` (local calendar
@@ -49,3 +49,11 @@ the dashboard.
   `build:desktop` OK. No screenshot. Incident: the worker printed the shell environment (incl. `JIRA_API_TOKEN`,
   `NPM_TOKEN`) into its tool output by mistake; nothing written to the repo (checked), user advised to rotate.
   Commit: `feat(dashboard): add sprint and client report preview with copy and save`.
+- Task 3: demo smoke via CDP (`flock-smokeeports.mjs`, outside the repo): sprint and client modals render; client
+  Markdown has none of the demo member names ("Ana Demo", "Ben Demo", "Former Demo") nor "Sin asignar", "Estancad",
+  "Fuera del equipo"; figures equal the dashboard screenshot of phase C ("Demo project" 17 de 35 Story Points (49%),
+  4 de 9 tareas, 1 sin Story Points; DEMO-1 38%, DEMO-2 64%); invalid period shows «Desde» > «Hasta» error and hides
+  the preview; "Copiar" shows "Informe copiado al portapapeles."; no page console errors. "Guardar .md" not clicked
+  (native dialog) — covered by Karma. Exit criteria met: client no-names (automated test in node and Karma) and
+  figures match the dashboard (same metric functions + demo comparison). Pending: the user's check with the real
+  team (copy/save a report). Commit: `docs: close flow 2 phase D`.
