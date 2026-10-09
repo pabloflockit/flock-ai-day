@@ -525,3 +525,41 @@ button.toast-close {
   color: var(--brand);
   background: var(--brand-soft);
 }
+
+// ---- Radio choices (options in forms) -----------------------------------------------------
+.choice-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  border: none;
+
+  legend {
+    float: left;
+    min-width: 6rem;
+    padding: 0;
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-label);
+  }
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-control);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  cursor: pointer;
+
+  input {
+    accent-color: var(--brand);
+  }
+}

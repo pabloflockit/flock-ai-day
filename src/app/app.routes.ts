@@ -20,5 +20,10 @@ export const routes: Routes = [
     path: 'teams/:id',
     loadComponent: () => import('./pages/teams/team-detail.page').then((m) => m.TeamDetailPage),
   },
+  {
+    path: 'projects/:id',
+    loadComponent: () =>
+      import('./pages/projects/project-detail.page').then((m) => m.ProjectDetailPage),
+  },
   { path: '**', redirectTo: 'connection' },
 ];

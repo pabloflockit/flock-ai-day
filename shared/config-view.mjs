@@ -4,6 +4,9 @@
  *
  * @typedef {import('../proxy/config/normalize.mjs').AppConfig} AppConfig
  * @typedef {AppConfig['teams'][number]} Team
+ * @typedef {AppConfig['projects'][number]} Project
+ * @typedef {{ id: string, name: string, custom: boolean, schema: { type: string | null } }} JiraField
+ * @typedef {{ key: string, status: 'ok' | 'failed', lastOkAt: string | null, errorCode?: string | null }} ShardMeta
  * @typedef {{ accountId: string, displayName: string, emailAddress: string | null }} JiraUserHit
  */
 
@@ -48,6 +51,50 @@ export function userSearchHits(config, teamId, users) {
       user,
       inThisTeam: teams.some((t) => t.id === teamId),
       otherTeams: teams.filter((t) => t.id !== teamId).map((t) => t.name),
+    };
+  });
+}
+
+/** Jira time-tracking fields: numeric, but the value is a duration in seconds. */
+const TIME_TRACKING_FIELDS = new Set([
+  'timeoriginalestimate',
+  'timeestimate',
+  'timespent',
+  'aggregatetimeoriginalestimate',
+  'aggregatetimeestimate',
+  'aggregatetimespent',
+]);
+
+/**
+ * Fields a project can measure by (plan §6.1.4): the numeric ones from `/api/jira/fields`,
+ * sorted by name, already shaped as a `measure` of kind `field`.
+ * @param {JiraField[]} fields
+ */
+export function measureFields(fields) {
+  return fields
+    .filter((f) => f.schema?.type === 'number')
+    .map((f) => ({
+      fieldId: f.id,
+      fieldName: f.name,
+      valueType: /** @type {'number' | 'time_seconds'} */ (TIME_TRACKING_FIELDS.has(f.id) ? 'time_seconds' : 'number'),
+    }))
+    .sort((a, b) => a.fieldName.localeCompare(b.fieldName, 'es'));
+}
+
+/**
+ * Each project epic with its last sync from the dataset `shardsMeta` (plan §6.1.5):
+ * `ok`, `failed` (keeps the previous `lastOkAt`) or `never` when it has not been fetched yet.
+ * @param {Project} project @param {ShardMeta[]} shardsMeta
+ */
+export function epicSyncRows(project, shardsMeta) {
+  const meta = new Map(shardsMeta.map((m) => [m.key, m]));
+  return project.epics.map((epic) => {
+    const shard = meta.get(epic.key);
+    return {
+      epic,
+      status: /** @type {'ok' | 'failed' | 'never'} */ (shard?.status ?? 'never'),
+      lastOkAt: shard?.lastOkAt ?? null,
+      errorCode: shard?.errorCode ?? null,
     };
   });
 }

@@ -40,6 +40,7 @@ const seed = () => ({
       measure: { kind: 'count' },
       epics: [{ key: 'PRT-1', issueTypeId: '10000', summary: 'Uno', active: true }],
     },
+    { id: 'p2', teamId: 't1', name: 'Vacío', workUnit: 'both', measure: { kind: 'field', fieldId: 'customfield_1', fieldName: 'Puntos', valueType: 'number' }, epics: [] },
   ],
 });
 
@@ -81,7 +82,7 @@ describe('TeamDetailPage', () => {
     const button = (text: string, root: ParentNode = el) =>
       Array.from(root.querySelectorAll('button')).find((b) => b.textContent?.trim().includes(text)) as HTMLButtonElement;
     const rows = () => Array.from(el.querySelectorAll('tbody tr')) as HTMLElement[];
-    return { fixture, el, ask, render, button, rows, stored: () => stored };
+    return { fixture, el, proxy, ask, render, button, rows, stored: () => stored };
   }
 
   it('renders the members with chips and the other-team note', async () => {
@@ -130,7 +131,7 @@ describe('TeamDetailPage', () => {
     const { el, render, fixture } = setup();
     await render();
     const tabs = Array.from(el.querySelectorAll('[role="tab"]')) as HTMLButtonElement[];
-    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Integrantes (2)', 'Proyectos (1)']);
+    expect(tabs.map((t) => t.textContent?.trim())).toEqual(['Integrantes (2)', 'Proyectos (2)']);
     expect(tabs[0].getAttribute('aria-selected')).toBe('true');
 
     tabs[1].click();
@@ -140,5 +141,74 @@ describe('TeamDetailPage', () => {
     const row = el.querySelector('tbody tr') as HTMLElement;
     expect(row.textContent).toContain('Portal');
     expect(row.textContent).toContain('1');
+    expect(row.textContent).toContain('Tareas · Cantidad');
+    expect(row.querySelector('a')?.getAttribute('href')).toBe('/projects/p1');
+    expect(el.querySelectorAll('tbody tr')[1].textContent).toContain('Tareas y subtareas · Puntos');
+  });
+
+  describe('projects tab', () => {
+    async function openProjects() {
+      const ctx = setup();
+      await ctx.render();
+      (ctx.el.querySelectorAll('[role="tab"]')[1] as HTMLButtonElement).click();
+      ctx.fixture.detectChanges();
+      return ctx;
+    }
+    const type = (el: HTMLElement, selector: string, value: string) => {
+      const input = el.querySelector(selector) as HTMLInputElement;
+      input.value = value;
+      input.dispatchEvent(new Event('input'));
+    };
+
+    it('creates a project for the team', async () => {
+      const { el, fixture, render, button, stored } = await openProjects();
+      button('Nuevo proyecto').click();
+      fixture.detectChanges();
+      type(el, '#project-name', 'Nuevo');
+      type(el, '#project-description', 'Desc');
+      button('Crear', el.querySelector('[role="dialog"]')!).click();
+      await render();
+      const created = stored().projects.at(-1)!;
+      expect(created).toEqual(jasmine.objectContaining({ name: 'Nuevo', teamId: 't1', description: 'Desc', active: true }));
+      expect(el.querySelector('[role="dialog"]')).toBeNull();
+      expect(el.textContent).toContain('Nuevo');
+    });
+
+    it('shows the name error and keeps the modal open on a duplicate', async () => {
+      const { el, fixture, render, button, proxy } = await openProjects();
+      proxy.put.calls.reset();
+      button('Nuevo proyecto').click();
+      fixture.detectChanges();
+      type(el, '#project-name', 'portal');
+      button('Crear', el.querySelector('[role="dialog"]')!).click();
+      await render();
+      expect(proxy.put).not.toHaveBeenCalled();
+      expect(el.querySelector('[role="dialog"] .field-error')).not.toBeNull();
+    });
+
+    it('toggles a project', async () => {
+      const { el, render, button, rows, stored } = await openProjects();
+      button('Desactivar', rows()[0]).click();
+      await render();
+      expect(stored().projects[0].active).toBeFalse();
+      expect(el.querySelectorAll('tbody tr')[0].textContent).toContain('Inactivo');
+    });
+
+    it('shows the guard message instead of deleting a project with epics', async () => {
+      const { el, render, button, rows, ask, stored } = await openProjects();
+      button('Eliminar', rows()[0]).click();
+      await render();
+      expect(ask).not.toHaveBeenCalled();
+      expect(stored().projects.length).toBe(2);
+      expect(el.querySelector('.delete-error')?.textContent).toContain('épica');
+    });
+
+    it('deletes an empty project after confirmation', async () => {
+      const { render, button, rows, ask, stored } = await openProjects();
+      button('Eliminar', rows()[1]).click();
+      await render();
+      expect(ask).toHaveBeenCalledTimes(1);
+      expect(stored().projects.map((p) => p.id)).toEqual(['p1']);
+    });
   });
 });

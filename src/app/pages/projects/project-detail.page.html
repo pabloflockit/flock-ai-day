@@ -1,0 +1,282 @@
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+} @else if (configState().status === 'ready') {
+  @if (project(); as p) {
+    <header class="page-header">
+      <div>
+        @if (team(); as t) {
+          <a [routerLink]="['/teams', t.id]" class="back">{{ t.name }}</a>
+        }
+        <h1>
+          {{ p.name }}
+          @if (p.active) {
+            <span class="status-chip state-done">Activo</span>
+          } @else {
+            <span class="status-chip state-pending">Inactivo</span>
+          }
+        </h1>
+        @if (p.description) {
+          <p class="field-hint">{{ p.description }}</p>
+        }
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-ghost" (click)="openEdit()">Editar</button>
+        <button type="button" class="btn-ghost" (click)="toggleActive(!p.active)">
+          {{ p.active ? 'Desactivar' : 'Activar' }}
+        </button>
+        <button type="button" class="btn-ghost" (click)="remove()">Eliminar proyecto</button>
+      </div>
+    </header>
+
+    @if (deleteError(); as message) {
+      <p class="field-error delete-error" role="alert">{{ message }}</p>
+    }
+
+    <section class="card section">
+      <h2>Equipo</h2>
+      <div class="inline-form">
+        <div class="field">
+          <label for="reassign-team">Pasar a otro equipo</label>
+          <select id="reassign-team" (change)="targetTeamId.set($any($event.target).value)">
+            <option value="" [selected]="!targetTeamId()">Elegí un equipo</option>
+            @for (t of otherTeams(); track t.id) {
+              <option [value]="t.id" [selected]="t.id === targetTeamId()">{{ t.name }}</option>
+            }
+          </select>
+        </div>
+        <button type="button" class="btn-ghost" [disabled]="!targetTeamId()" (click)="reassign()">
+          Cambiar de equipo
+        </button>
+      </div>
+    </section>
+
+    <section class="card section">
+      <h2>Medición</h2>
+      <fieldset class="choice-group">
+        <legend>Unidad</legend>
+        @for (u of units; track u.value) {
+          <label class="choice" [for]="'unit-' + u.value">
+            <input
+              type="radio"
+              name="unit"
+              [id]="'unit-' + u.value"
+              [checked]="unit() === u.value"
+              (change)="unit.set(u.value)"
+            />
+            {{ u.label }}
+          </label>
+        }
+      </fieldset>
+      <fieldset class="choice-group">
+        <legend>Medida</legend>
+        <label class="choice" for="measure-count">
+          <input
+            type="radio"
+            name="measure"
+            id="measure-count"
+            [checked]="measureKind() === 'count'"
+            (change)="measureKind.set('count')"
+          />
+          Cantidad
+        </label>
+        <label class="choice" for="measure-field">
+          <input
+            type="radio"
+            name="measure"
+            id="measure-field"
+            [checked]="measureKind() === 'field'"
+            (change)="measureKind.set('field')"
+          />
+          Campo numérico
+        </label>
+      </fieldset>
+
+      @if (measureKind() === 'field') {
+        @if (!jiraReady() && fieldOptions().length === 0) {
+          <p class="field-hint">
+            Configurá la conexión con Jira para elegir un campo.
+            <a routerLink="/connection">Ir a Conexión</a>
+          </p>
+        } @else {
+          <div class="field">
+            <label for="measure-field-select">Campo</label>
+            <select
+              id="measure-field-select"
+              [disabled]="fields().status === 'loading'"
+              (change)="fieldId.set($any($event.target).value)"
+            >
+              <option value="" [selected]="!fieldId()">
+                {{ fields().status === 'loading' ? 'Cargando campos…' : 'Elegí un campo' }}
+              </option>
+              @for (o of fieldOptions(); track o.fieldId) {
+                <option [value]="o.fieldId" [selected]="o.fieldId === fieldId()">{{ o.fieldName }}</option>
+              }
+            </select>
+            @if (fields().error; as error) {
+              <span class="field-error" role="alert">
+                No se pudieron cargar los campos: {{ error.message }} (código: {{ error.code }})
+              </span>
+            }
+            @if (fields().status === 'ok' && fieldOptions().length === 0) {
+              <span class="field-hint">Jira no devolvió campos numéricos.</span>
+            }
+          </div>
+        }
+      }
+      <div>
+        <button type="button" [disabled]="!canSaveMeasure()" (click)="saveMeasure()">Guardar medición</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Épicas ({{ p.epics.length }})</h2>
+      <div class="inline-form">
+        <div class="field">
+          <label for="epic-key">Clave de la épica</label>
+          <input
+            id="epic-key"
+            type="text"
+            autocomplete="off"
+            placeholder="PRJ-123"
+            class="text-mono"
+            [disabled]="!jiraReady()"
+            [value]="epicKey()"
+            (input)="epicKey.set($any($event.target).value); epicError.set(null)"
+            (keydown.enter)="addEpic()"
+          />
+          @if (!jiraReady()) {
+            <span class="field-hint">
+              Configurá la conexión con Jira para agregar épicas.
+              <a routerLink="/connection">Ir a Conexión</a>
+            </span>
+          }
+          @if (epicError(); as message) {
+            <span class="field-error epic-error" role="alert">{{ message }}</span>
+          }
+        </div>
+        <button type="button" [disabled]="!jiraReady() || addingEpic()" (click)="addEpic()">Agregar</button>
+      </div>
+
+      @if (!hasSyncData()) {
+        <p class="field-hint">Sin datos de sincronización</p>
+      }
+
+      @if (p.epics.length === 0) {
+        <div class="card"><p>Este proyecto no tiene épicas.</p></div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Clave</th>
+                <th>Resumen</th>
+                <th>Estado</th>
+                <th>Última sincronización</th>
+                <th>Vinculación</th>
+                <th><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of epicRows(); track row.epic.key) {
+                <tr>
+                  <td class="text-mono">{{ row.epic.key }}</td>
+                  <td>{{ row.epic.summary }}</td>
+                  <td>
+                    @if (row.epic.active) {
+                      <span class="status-chip state-done">Activa</span>
+                    } @else {
+                      <span class="status-chip state-pending">Inactiva</span>
+                    }
+                  </td>
+                  <td>
+                    @if (row.status === 'never') {
+                      <span class="status-chip state-pending">Sin sincronizar</span>
+                    } @else {
+                      <span class="text-mono">{{ formatDate(row.lastOkAt) }}</span>
+                      @if (row.status === 'failed') {
+                        <span class="status-chip state-blocked">Falló</span>
+                        <p class="field-hint sync-error">{{ syncErrorMessage(row.errorCode) }}</p>
+                      }
+                    }
+                  </td>
+                  <td>{{ linkMethodLabel(row.epic.linkMethodUsed) }}</td>
+                  <td>
+                    <div class="actions epic-actions">
+                      <button type="button" class="btn-ghost btn-small" (click)="toggleEpic(row.epic.key, !row.epic.active)">
+                        {{ row.epic.active ? 'Desactivar' : 'Activar' }}
+                      </button>
+                      @if (otherProjects().length > 0) {
+                        <select
+                          class="move-select"
+                          [attr.aria-label]="'Proyecto destino para ' + row.epic.key"
+                          (change)="setMoveTarget(row.epic.key, $any($event.target).value)"
+                        >
+                          <option value="" [selected]="!moveTargets()[row.epic.key]">Mover a…</option>
+                          @for (o of otherProjects(); track o.id) {
+                            <option [value]="o.id" [selected]="o.id === moveTargets()[row.epic.key]">{{ o.name }}</option>
+                          }
+                        </select>
+                        <button
+                          type="button"
+                          class="btn-ghost btn-small"
+                          [disabled]="!moveTargets()[row.epic.key]"
+                          (click)="moveEpic(row.epic.key)"
+                        >
+                          Mover
+                        </button>
+                      }
+                      <button type="button" class="btn-ghost btn-small" (click)="removeEpic(row.epic.key)">Quitar</button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    @if (editing()) {
+      <app-modal title="Editar proyecto" (closed)="closeEdit()">
+        <div class="field">
+          <label for="project-name">Nombre</label>
+          <input
+            id="project-name"
+            type="text"
+            autocomplete="off"
+            [value]="name()"
+            (input)="name.set($any($event.target).value)"
+            (keydown.enter)="submit()"
+          />
+          @if (nameError(); as message) {
+            <span class="field-error" role="alert">{{ message }}</span>
+          }
+        </div>
+        <div class="field">
+          <label for="project-description">Descripción</label>
+          <textarea
+            id="project-description"
+            rows="3"
+            [value]="description()"
+            (input)="description.set($any($event.target).value)"
+          ></textarea>
+        </div>
+        @if (formError(); as message) {
+          <p class="field-error" role="alert">{{ message }}</p>
+        }
+        <ng-container modal-actions>
+          <button type="button" class="btn-ghost" (click)="closeEdit()">Cancelar</button>
+          <button type="button" [disabled]="saving()" (click)="submit()">Guardar</button>
+        </ng-container>
+      </app-modal>
+    }
+  } @else {
+    <div class="card">
+      <p>El proyecto no existe.</p>
+      <a routerLink="/teams">Volver a Equipos</a>
+    </div>
+  }
+}

@@ -103,6 +103,14 @@
         </div>
       }
     } @else {
+      <div class="toolbar">
+        <button type="button" (click)="openProjectForm()"><app-icon name="plus" /> Nuevo proyecto</button>
+      </div>
+
+      @if (deleteError(); as message) {
+        <p class="field-error delete-error" role="alert">{{ message }}</p>
+      }
+
       @if (projects().length === 0) {
         <div class="card"><p>Este equipo no tiene proyectos.</p></div>
       } @else {
@@ -112,13 +120,20 @@
               <tr>
                 <th>Nombre</th>
                 <th>Estado</th>
+                <th>Medición</th>
                 <th class="num">Épicas</th>
+                <th><span class="visually-hidden">Acciones</span></th>
               </tr>
             </thead>
             <tbody>
               @for (p of projects(); track p.id) {
                 <tr>
-                  <td>{{ p.name }}</td>
+                  <td>
+                    <a [routerLink]="['/projects', p.id]">{{ p.name }}</a>
+                    @if (p.description) {
+                      <div class="field-hint">{{ p.description }}</div>
+                    }
+                  </td>
                   <td>
                     @if (p.active) {
                       <span class="status-chip state-done">Activo</span>
@@ -126,7 +141,18 @@
                       <span class="status-chip state-pending">Inactivo</span>
                     }
                   </td>
+                  <td>{{ measureSummary(p) }}</td>
                   <td class="num text-mono">{{ p.epics.length }}</td>
+                  <td>
+                    <div class="actions">
+                      <button type="button" class="btn-ghost btn-small" (click)="toggleProject(p.id, !p.active)">
+                        {{ p.active ? 'Desactivar' : 'Activar' }}
+                      </button>
+                      <button type="button" class="btn-ghost btn-small" (click)="removeProject(p.id, p.name)">
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               }
             </tbody>
@@ -140,4 +166,39 @@
       <a routerLink="/teams">Volver a Equipos</a>
     </div>
   }
+}
+
+@if (projectForm()) {
+  <app-modal title="Nuevo proyecto" (closed)="closeProjectForm()">
+    <div class="field">
+      <label for="project-name">Nombre</label>
+      <input
+        id="project-name"
+        type="text"
+        autocomplete="off"
+        [value]="projectName()"
+        (input)="projectName.set($any($event.target).value)"
+        (keydown.enter)="createProject()"
+      />
+      @if (nameError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+    <div class="field">
+      <label for="project-description">Descripción</label>
+      <textarea
+        id="project-description"
+        rows="3"
+        [value]="projectDescription()"
+        (input)="projectDescription.set($any($event.target).value)"
+      ></textarea>
+    </div>
+    @if (formError(); as message) {
+      <p class="field-error" role="alert">{{ message }}</p>
+    }
+    <ng-container modal-actions>
+      <button type="button" class="btn-ghost" (click)="closeProjectForm()">Cancelar</button>
+      <button type="button" [disabled]="saving()" (click)="createProject()">Crear</button>
+    </ng-container>
+  </app-modal>
 }

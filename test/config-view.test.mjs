@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeConfig } from '../proxy/config/normalize.mjs';
-import { initials, teamSummaries, userSearchHits } from '../shared/config-view.mjs';
+import { epicSyncRows, initials, measureFields, teamSummaries, userSearchHits } from '../shared/config-view.mjs';
 
 const member = (accountId, extra = {}) => ({ accountId, displayName: `User ${accountId}`, ...extra });
 const config = () =>
@@ -44,6 +44,45 @@ test('userSearchHits marks people already in this team and lists their other tea
     [
       ['a', true, ['Pagos']],
       ['z', false, []],
+    ],
+  );
+});
+
+test('measureFields keeps numeric fields sorted by name and marks Jira time tracking as seconds', () => {
+  const fields = [
+    { id: 'summary', name: 'Resumen', custom: false, schema: { type: 'string' } },
+    { id: 'customfield_10016', name: 'Story points', custom: true, schema: { type: 'number' } },
+    { id: 'timeoriginalestimate', name: 'Estimación original', custom: false, schema: { type: 'number' } },
+    { id: 'aggregatetimespent', name: 'Σ Tiempo invertido', custom: false, schema: { type: 'number' } },
+    { id: 'timetracking', name: 'Seguimiento de tiempo', custom: false, schema: { type: 'timetracking' } },
+    { id: 'customfield_1', name: 'Sin tipo', custom: true, schema: { type: null } },
+  ];
+  assert.deepEqual(measureFields(fields), [
+    { fieldId: 'timeoriginalestimate', fieldName: 'Estimación original', valueType: 'time_seconds' },
+    { fieldId: 'customfield_10016', fieldName: 'Story points', valueType: 'number' },
+    { fieldId: 'aggregatetimespent', fieldName: 'Σ Tiempo invertido', valueType: 'time_seconds' },
+  ]);
+});
+
+test('epicSyncRows joins each epic with its shard meta: ok, failed or never synced', () => {
+  const project = config().projects[0];
+  const rows = epicSyncRows(project, [
+    { key: 'A-1', status: 'ok', lastOkAt: '2026-10-01T10:00:00Z' },
+    { key: 'A-2', status: 'failed', lastOkAt: '2026-09-30T10:00:00Z', errorCode: 'JIRA_UNAVAILABLE' },
+    { key: 'Z-9', status: 'ok', lastOkAt: '2026-10-01T10:00:00Z' },
+  ]);
+  assert.deepEqual(
+    rows.map((r) => [r.epic.key, r.status, r.lastOkAt, r.errorCode]),
+    [
+      ['A-1', 'ok', '2026-10-01T10:00:00Z', null],
+      ['A-2', 'failed', '2026-09-30T10:00:00Z', 'JIRA_UNAVAILABLE'],
+    ],
+  );
+  assert.deepEqual(
+    epicSyncRows(project, []).map((r) => [r.status, r.lastOkAt, r.errorCode]),
+    [
+      ['never', null, null],
+      ['never', null, null],
     ],
   );
 });
