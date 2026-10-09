@@ -31,7 +31,7 @@ work not assigned to the team appears only in its own section; statuses and char
 - [x] 1. `work-units` domain — test-first, the four measurement steps in plan order.
 - [x] 2. `teamScope` / `teamOutside` domain — test-first.
 - [x] 3. Metrics M1–M6 and F1–F2 domain — test-first.
-- [ ] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
+- [x] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
 - [ ] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
 - [ ] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
 - [ ] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
@@ -51,3 +51,10 @@ work not assigned to the team appears only in its own section; statuses and char
   node suite 457/457. Decisions: `progress` sums the units it receives (scope filtering is `teamScope`'s job) and
   lists only active epics with units; buckets are `{ count, measure, missingMeasure, units }` for drill-down.
   Commit: `feat(domain): add dashboard metrics`.
+- Task 4 (worker): store `ensureProjectIssues(projectId)` / `projectIssues(projectId)` (reads the proxy's dataset,
+  never syncs); `src/app/pages/dashboard/dashboard.state.ts` (linkedSignal team -> project -> epic, units, scoped,
+  outside, `outsideOpenCount`, metric `groups`, `dataAsOf` / `missingDatasets` / `notCurrent`); `/dashboard` route and
+  nav section "Panel". Karma 136/136, node 457/457, `build:desktop` OK. RED not observed (first visible run was
+  already green after a truncated heredoc run); no mutation check. The `''` redirect stays on `connection` (no
+  "configured" notion). Pending for task 5: scope `tasksWithoutSubtasks` to the team.
+  Commit: `feat(dashboard): add dashboard data and view state`.

@@ -8,6 +8,10 @@ export const routes: Routes = [
       import('./pages/connection/connection.page').then((m) => m.ConnectionPage),
   },
   {
+    path: 'dashboard',
+    loadComponent: () => import('./pages/dashboard/dashboard.page').then((m) => m.DashboardPage),
+  },
+  {
     path: 'diagnostics',
     loadComponent: () =>
       import('./pages/diagnostics/diagnostics.page').then((m) => m.DiagnosticsPage),

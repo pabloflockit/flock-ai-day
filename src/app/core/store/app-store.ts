@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import type { IssueRow } from '../../../../shared/contracts.mjs';
-import { resolveTarget, type Scope } from '../../../../shared/cache-key.mjs';
+import { projectIssuesParams, resolveTarget, type Scope } from '../../../../shared/cache-key.mjs';
 import type { AppConfig } from '../../../../proxy/config/normalize.mjs';
 import { ProxyClient, ProxyError, TRANSPORT_ERROR } from '../proxy-client';
 
@@ -262,6 +262,24 @@ export class AppStore {
   }
 
   /**
+   * The `projectIssues` dataset of a configured project: what the proxy holds, never a Jira call.
+   * Reactive (reads the config and the datasets). `EMPTY_DATASET` until `ensureProjectIssues` ran;
+   * afterwards `status: 'ready'` with `fetchedAt: null` means the project was never synced.
+   */
+  projectIssues(projectId: string): DatasetState {
+    const key = this.#projectIssuesKey(projectId);
+    return (key && this.datasets()[key]) || EMPTY_DATASET;
+  }
+
+  /** Hydrates the `projectIssues` dataset of a configured project (no-op for an unknown project). */
+  ensureProjectIssues(projectId: string): void {
+    const config = this.config();
+    const project = config?.projects.find((p) => p.id === projectId);
+    if (!config || !project) return;
+    this.ensureHydrated('projectIssues', project.id, projectIssuesParams(project, config));
+  }
+
+  /**
    * `POST /api/datasets/:source/refresh`. On failure the previous rows stay (stale, not empty).
    * Calls for a key that is already refreshing share the same promise.
    */
@@ -287,6 +305,14 @@ export class AppStore {
       .finally(() => this.#refreshing.delete(cacheKey));
     this.#refreshing.set(cacheKey, run);
     return run;
+  }
+
+  #projectIssuesKey(projectId: string): string | null {
+    const config = this.config();
+    const project = config?.projects.find((p) => p.id === projectId);
+    return config && project
+      ? this.cacheKeyFor('projectIssues', project.id, projectIssuesParams(project, config))
+      : null;
   }
 
   #setConfig(config: ConfigState): void {

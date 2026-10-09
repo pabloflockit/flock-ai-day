@@ -14,6 +14,10 @@ export interface NavSection {
 /** Sidebar navigation. Items are added as their screens land (odd/tasks/flow2-phase-a.md). */
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
+    title: 'Panel',
+    items: [{ label: 'Dashboard', path: '/dashboard', icon: 'progress' }],
+  },
+  {
     title: 'Administración',
     items: [
       { label: 'Conexión', path: '/connection', icon: 'link' },

@@ -227,3 +227,51 @@ describe('AppStore reloadConfig', () => {
     expect(store.configState().status).toBe('error');
   });
 });
+
+describe('AppStore projectIssues', () => {
+  const config = normalizeConfig({
+    jira: { baseUrl: 'https://acme.atlassian.net', email: 'a@b.c' },
+    teams: [{ id: 't1', name: 'Alfa', active: true, members: [] }],
+    projects: [
+      { id: 'p1', teamId: 't1', name: 'Portal', active: true, workUnit: 'task', measure: { kind: 'count' }, epics: [] },
+    ],
+  });
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
+
+  function setup(get: jasmine.Spy) {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: { get } }],
+    });
+    return TestBed.inject(AppStore);
+  }
+
+  it('reads the dataset of a project once, without refreshing, and exposes the empty state before and after', async () => {
+    const get = jasmine.createSpy('get').and.callFake((path: string) =>
+      Promise.resolve(
+        path === '/api/config'
+          ? config
+          : { rows: [], fetchedAt: null, isCurrent: false, shardsMeta: [] },
+      ),
+    );
+    const store = setup(get);
+    await store.loadConfig();
+
+    expect(store.projectIssues('p1').status).toBe('idle');
+    store.ensureProjectIssues('p1');
+    store.ensureProjectIssues('p1');
+    await flush();
+
+    expect(get).toHaveBeenCalledWith('/api/datasets/projectIssues?scopeId=p1');
+    expect(get.calls.allArgs().filter(([p]) => String(p).includes('/api/datasets')).length).toBe(1);
+    expect(store.projectIssues('p1')).toEqual(jasmine.objectContaining({ status: 'ready', fetchedAt: null, rows: [] }));
+  });
+
+  it('ignores an unknown project and does not call the proxy', async () => {
+    const get = jasmine.createSpy('get').and.resolveTo(config);
+    const store = setup(get);
+    await store.loadConfig();
+    store.ensureProjectIssues('nope');
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(store.projectIssues('nope').status).toBe('idle');
+  });
+});

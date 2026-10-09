@@ -1,0 +1,81 @@
+<header class="page-header">
+  <h1>Dashboard</h1>
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+} @else if (configState().status === 'ready') {
+  @if (state.activeTeams().length === 0) {
+    <div class="card empty">
+      <p>Todavía no hay equipos activos.</p>
+      <div><a routerLink="/teams">Ir a Equipos</a></div>
+    </div>
+  } @else {
+    <div class="filter-bar">
+      <label class="field">
+        Equipo
+        <select [value]="state.teamId()" (change)="selectTeam($any($event.target).value)">
+          @for (team of state.activeTeams(); track team.id) {
+            <option [value]="team.id" [selected]="team.id === state.teamId()">{{ team.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        Proyecto
+        <select (change)="selectProject($any($event.target).value)">
+          <option value="" [selected]="state.projectId() === null">Todos</option>
+          @for (project of state.projects(); track project.id) {
+            <option [value]="project.id" [selected]="project.id === state.projectId()">{{ project.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field">
+        Épica
+        <select (change)="selectEpic($any($event.target).value)">
+          <option value="" [selected]="state.epicKey() === null">Todas</option>
+          @for (epic of state.epics(); track epic.key) {
+            <option [value]="epic.key" [selected]="epic.key === state.epicKey()">{{ epic.key }} · {{ epic.summary }}</option>
+          }
+        </select>
+      </label>
+    </div>
+
+    <section class="card summary">
+      <h2>{{ state.team()?.name }}</h2>
+      @if (state.dataAsOf(); as asOf) {
+        <p class="field-hint">Datos al {{ asOf | instant }}</p>
+      }
+      @if (state.notCurrent()) {
+        <p class="field-hint">Algunos datos no están al día: la última actualización falló o cambió la configuración.</p>
+      }
+      @if (state.missingDatasets().length > 0) {
+        <p class="field-hint" role="status">
+          Faltan datos: sincronizá desde <a routerLink="/sync">Sincronización</a>
+          ({{ state.missingDatasets().length === 1 ? 'proyecto' : 'proyectos' }}:
+          @for (project of state.missingDatasets(); track project.id; let last = $last) {
+            {{ project.name }}{{ last ? '' : ', ' }}
+          }).
+        </p>
+      }
+      @for (item of state.datasetErrors(); track item.project.id) {
+        <p class="field-error" role="alert">{{ item.project.name }}: {{ item.error.message }}</p>
+      }
+      @if (state.loading()) {
+        <p class="field-hint" role="status">Cargando datos…</p>
+      }
+      <dl class="counts">
+        <div>
+          <dt>Unidades en el alcance</dt>
+          <dd>{{ state.scoped().length }}</dd>
+        </div>
+        <div>
+          <dt>Abiertas fuera del equipo</dt>
+          <dd>{{ state.outsideOpenCount() }}</dd>
+        </div>
+      </dl>
+    </section>
+  }
+}
