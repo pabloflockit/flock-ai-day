@@ -617,6 +617,11 @@ button.toast-close {
   }
 }
 
+/* Counter of units with no value in the measure field (plan §3): a warning, not a figure. */
+.num-link.missing {
+  color: var(--state-blocked-fg);
+}
+
 .stack-bar {
   display: flex;
   gap: 2px;

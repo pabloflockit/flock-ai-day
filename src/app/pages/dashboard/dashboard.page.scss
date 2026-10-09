@@ -20,20 +20,6 @@
   }
 }
 
-.outside-counter {
-  padding: 0;
-  border: none;
-  font-weight: 600;
-  color: var(--text-soft);
-  background: transparent;
-  cursor: pointer;
-
-  &:hover {
-    color: var(--text-strong);
-    text-decoration: underline;
-  }
-}
-
 .groups {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));

@@ -1,7 +1,7 @@
 <header class="page-header">
   <h1>Dashboard</h1>
   @if (configState().status === 'ready' && state.activeTeams().length > 0) {
-    <button type="button" class="outside-counter" (click)="view.set('outside')">
+    <button type="button" class="outside-counter btn-ghost btn-small" (click)="view.set('outside')">
       {{ state.outsideOpenCount() }}
       {{ state.outsideOpenCount() === 1 ? 'unidad fuera del equipo' : 'unidades fuera del equipo' }}
     </button>
