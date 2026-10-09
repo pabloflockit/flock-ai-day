@@ -277,4 +277,45 @@ describe('ConnectionPage', () => {
       expect(section(el).textContent).toContain('UNREACHABLE');
     });
   });
+
+  describe('Estados bloqueados', () => {
+    const section = (el: HTMLElement) => el.querySelector('[data-testid="blocked-statuses"]') as HTMLElement;
+    const boxes = (el: HTMLElement) => Array.from(section(el).querySelectorAll('input[type="checkbox"]')) as HTMLInputElement[];
+
+    it('lists every Jira status with a checkbox, checked for the saved blocked ones', async () => {
+      const { render, el } = setup({ ...configured, jira: { ...configured.jira, blockedStatusIds: ['3'] } });
+      await render();
+      expect(section(el).textContent).toContain('Estados bloqueados');
+      expect(section(el).textContent).toContain('Los ítems en estos estados cuentan como bloqueados en el informe de cierre.');
+      expect(boxes(el).map((b) => b.getAttribute('aria-label'))).toEqual([
+        'Bloqueado: To Do',
+        'Bloqueado: In Review',
+        'Bloqueado: Done',
+      ]);
+      expect(boxes(el).map((b) => b.checked)).toEqual([false, true, false]);
+    });
+
+    it('toggling a checkbox saves the list at once and unchecking removes it', async () => {
+      const { page, render, el, stored } = setup(configured);
+      await render();
+      const box = boxes(el)[1];
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      await render();
+      expect(stored().jira.blockedStatusIds).toEqual(['3']);
+      await page.setBlockedStatus('1', true);
+      expect(stored().jira.blockedStatusIds).toEqual(['3', '1']);
+      await page.setBlockedStatus('3', false);
+      expect(stored().jira.blockedStatusIds).toEqual(['1']);
+    });
+
+    it('saving a blocked status keeps unsaved status-mapping edits', async () => {
+      const { page, render } = setup(configured);
+      await render();
+      page.overrides.set({ '3': 'done' });
+      await page.setBlockedStatus('5', true);
+      await render();
+      expect(page.overrides()).toEqual({ '3': 'done' });
+    });
+  });
 });

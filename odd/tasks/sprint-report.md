@@ -52,7 +52,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       active epics like `scope.mjs`; one shard, delta + degradation like `projectIssues`; demo answers the new JQL.
 - [x] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
       hygiene notes, outside-epics section (test-first).
-- [ ] 4b. Blocked statuses: `jira.blockedStatusIds` in the config (normalize, validate, does not move cache keys) and
+- [x] 4b. Blocked statuses: `jira.blockedStatusIds` in the config (normalize, validate, does not move cache keys) and
       a picker in Conexión -> Particularidades.
 - [ ] 5. HTML template with the Flock design tokens, date-range picker, preview, `saveHtml` bridge (validated in main).
 - [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
@@ -109,3 +109,8 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   node 514/514. Demo end-to-end check (script in %TEMP%/flock-verify, outside the repo): 16 moved items, FE 2, BE 2,
   Sin capa 12, outside DEMO-25 (DEMO-26 ref + DEMO-27) and DEMO-28; no hygiene notes in the demo yet (task 6).
   Commit: `feat(domain): build the layered sprint close model`.
+- Task 4b (worker; subagents worked again): `jira.blockedStatusIds` (normalize: trimmed, deduped, ordered; validate
+  `BLOCKED_STATUS_INVALID`; no cache key move), `setBlockedStatus` op, "Estados bloqueados" checkboxes in Conexión ->
+  Particularidades (saves on toggle, unsaved status-mapping edits survive via the task 2 fix). RED observed for node
+  (Karma spec written with the code, no RED). node 519/519, Karma 178/178, `build:desktop` OK.
+  Commit: `feat(config): configure blocked statuses for the sprint report`.

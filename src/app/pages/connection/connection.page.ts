@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { setComponentLayer, setJiraConnection, setJiraParticularities } from '../../../../shared/config-edit.mjs';
+import { setBlockedStatus, setComponentLayer, setJiraConnection, setJiraParticularities } from '../../../../shared/config-edit.mjs';
 import { componentLayerRows } from '../../../../shared/config-view.mjs';
 import { ConfigEditor } from '../../core/config-editor';
 import { idle, track, type Op } from '../../core/op';
@@ -239,6 +239,16 @@ export class ConnectionPage {
     await this.#editor.apply((c) =>
       setComponentLayer(c, { projectKey, componentId: component.id, componentName: component.name }, layer || null),
     );
+  }
+
+  /** Whether a Jira status counts as blocked in the sprint close report. */
+  isBlocked(statusId: string): boolean {
+    return this.config()?.jira.blockedStatusIds.includes(statusId) ?? false;
+  }
+
+  /** Saves right away; unsaved status-mapping edits are kept (the overrides draft compares by content). */
+  async setBlockedStatus(statusId: string, blocked: boolean): Promise<void> {
+    await this.#editor.apply((c) => setBlockedStatus(c, statusId, blocked));
   }
 
   /** `''` removes the override: the status keeps the category Jira gives it. */

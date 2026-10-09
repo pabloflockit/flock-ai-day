@@ -48,6 +48,7 @@ interface AppConfig {
     maxRetries: number;                    // default 3
     statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'>;  // por statusId
     componentLayers: Array<{ projectKey: string; componentId: string; componentName: string; layer: 'frontend' | 'backend' | 'functional' }>;  // capa por componente de Jira (informe de cierre)
+    blockedStatusIds: string[];  // ids de estados de Jira que cuentan como bloqueados en el informe de cierre
   };
   settings: {
     staleBusinessDays: number;             // default 5

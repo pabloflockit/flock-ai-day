@@ -60,6 +60,17 @@ export function validateConfig(config) {
     mapped.add(id);
   });
 
+  const blocked = /** @type {unknown} */ (config.jira.blockedStatusIds);
+  if (!Array.isArray(blocked)) {
+    add('BLOCKED_STATUS_INVALID', 'jira.blockedStatusIds', 'Los estados bloqueados deben ser una lista de ids de estado de Jira.');
+  } else {
+    blocked.forEach((id, i) => {
+      if (typeof id !== 'string' || id.trim() === '') {
+        add('BLOCKED_STATUS_INVALID', `jira.blockedStatusIds[${i}]`, 'El id de un estado bloqueado no es válido.');
+      }
+    });
+  }
+
   const teamNames = new Set();
   const teamIds = new Set();
   config.teams.forEach((team, i) => {

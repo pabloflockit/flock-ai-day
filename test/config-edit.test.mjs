@@ -244,3 +244,20 @@ test('setJiraParticularities keeps the component layers', () => {
   const next = ok(edit.setJiraParticularities(withLayer, { epicLinkMode: 'parent', epicLinkFieldId: null, statusCategoryOverrides: {} }));
   assert.equal(next.jira.componentLayers.length, 1);
 });
+
+test('setBlockedStatus adds a status id once, keeps order and removes it with false', () => {
+  const one = ok(edit.setBlockedStatus(base(), '10', true));
+  assert.deepEqual(one.jira.blockedStatusIds, ['10']);
+  const two = ok(edit.setBlockedStatus(one, ' 3 ', true));
+  assert.deepEqual(two.jira.blockedStatusIds, ['10', '3']);
+  assert.deepEqual(ok(edit.setBlockedStatus(two, '10', true)).jira.blockedStatusIds, ['10', '3']);
+  assert.deepEqual(ok(edit.setBlockedStatus(two, '10', false)).jira.blockedStatusIds, ['3']);
+  assert.deepEqual(ok(edit.setBlockedStatus(base(), '99', false)).jira.blockedStatusIds, []);
+});
+
+test('setBlockedStatus rejects an empty id and never modifies the config', () => {
+  const config = base();
+  const snapshot = structuredClone(config);
+  assert.deepEqual(codes(edit.setBlockedStatus(config, '  ', true)), ['BLOCKED_STATUS_REQUIRED']);
+  assert.deepEqual(config, snapshot);
+});

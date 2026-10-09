@@ -15,6 +15,7 @@ test('defaults for an empty or garbage input', () => {
         maxRetries: 3,
         statusCategoryOverrides: {},
         componentLayers: [],
+        blockedStatusIds: [],
       },
       settings: {
         staleBusinessDays: 5,
@@ -155,4 +156,13 @@ test('componentLayers: drops malformed entries; same project + component: last w
     { projectKey: 'ABC', componentId: '2', componentName: '', layer: 'backend' },
   ]);
   assert.deepEqual(normalizeConfig({ jira: { componentLayers: 'nope' } }).jira.componentLayers, []);
+});
+
+test('blockedStatusIds: defaults to [], keeps non-empty strings trimmed, deduped, in order', () => {
+  assert.deepEqual(normalizeConfig({}).jira.blockedStatusIds, []);
+  assert.deepEqual(
+    normalizeConfig({ jira: { blockedStatusIds: [' 10 ', '', '  ', 7, null, '3', '10', {}, '2'] } }).jira.blockedStatusIds,
+    ['10', '3', '2'],
+  );
+  assert.deepEqual(normalizeConfig({ jira: { blockedStatusIds: 'nope' } }).jira.blockedStatusIds, []);
 });

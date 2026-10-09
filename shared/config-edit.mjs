@@ -392,6 +392,27 @@ export function setComponentLayer(config, component, layer) {
   });
 }
 
+// ---- Blocked statuses (sprint report) ---------------------------------------------------------
+
+/**
+ * Marks a Jira status (by id) as blocked, or unmarks it, for the sprint close report.
+ * @param {AppConfig} config
+ * @param {string} statusId
+ * @param {boolean} blocked
+ */
+export function setBlockedStatus(config, statusId, blocked) {
+  const id = statusId.trim();
+  if (id === '') {
+    return fail('BLOCKED_STATUS_REQUIRED', 'jira.blockedStatusIds', 'Elegí un estado de Jira.');
+  }
+  return apply(config, (draft) => {
+    const list = draft.jira.blockedStatusIds;
+    const index = list.indexOf(id);
+    if (blocked && index < 0) list.push(id);
+    if (!blocked && index >= 0) list.splice(index, 1);
+  });
+}
+
 // ---- General settings (plan §6.1.6) -----------------------------------------------------------
 
 const MAX_BUSINESS_DAYS = 365;

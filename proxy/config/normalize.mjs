@@ -35,7 +35,7 @@ function canonicalBaseUrl(value) {
  * @typedef {{ id: string, teamId: string, name: string, description: string | null, active: boolean, workUnit: WorkUnit, measure: Measure, epics: Epic[] }} Project
  * @typedef {{
  *   version: number,
- *   jira: { baseUrl: string, email: string, epicLinkMode: 'parent' | 'epic_link' | 'auto', epicLinkFieldId: string | null, timeoutMs: number, maxRetries: number, statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'>, componentLayers: ComponentLayer[] },
+ *   jira: { baseUrl: string, email: string, epicLinkMode: 'parent' | 'epic_link' | 'auto', epicLinkFieldId: string | null, timeoutMs: number, maxRetries: number, statusCategoryOverrides: Record<string, 'todo' | 'doing' | 'done'>, componentLayers: ComponentLayer[], blockedStatusIds: string[] },
  *   settings: { staleBusinessDays: number, agingBusinessDays: number, fullRefreshMaxAgeHours: number, ai: { enabled: boolean } },
  *   teams: Team[],
  *   projects: Project[],
@@ -174,6 +174,16 @@ function normalizeComponentLayers(raw) {
 }
 
 /**
+ * Jira status ids whose items count as blocked in the sprint close report: non-empty strings,
+ * trimmed, deduped, in order.
+ * @param {unknown} raw @returns {string[]}
+ */
+function normalizeBlockedStatusIds(raw) {
+  const ids = arr(raw).map((v) => str(v)).filter((v) => v !== '');
+  return [...new Set(ids)];
+}
+
+/**
  * @param {unknown} raw anything (a stored document, a request body, `undefined`)
  * @returns {AppConfig}
  */
@@ -192,6 +202,7 @@ export function normalizeConfig(raw) {
       maxRetries: int(jira.maxRetries, 3, 0),
       statusCategoryOverrides: normalizeOverrides(jira.statusCategoryOverrides),
       componentLayers: normalizeComponentLayers(jira.componentLayers),
+      blockedStatusIds: normalizeBlockedStatusIds(jira.blockedStatusIds),
     },
     settings: {
       staleBusinessDays: int(settings.staleBusinessDays, 5, 1),

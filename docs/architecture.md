@@ -384,6 +384,7 @@ POST /api/reports/ai                 # solo si está habilitado; recibe métrica
 ### 8.4 Configuración
 - **Una sola función** `normalizeConfig(raw)`: lista blanca, idempotente, descarta claves desconocidas. Es el único lugar donde se migra la forma de la configuración.
 - `validateConfig` aplica las reglas de integridad de negocio (definidas en `plan.md`).
+- **Estados bloqueados** (informe de cierre): `jira.blockedStatusIds: string[]` (ids de estado de Jira), default `[]`. `normalizeConfig` conserva solo textos no vacíos, sin repetidos y en orden; `validateConfig` rechaza lo que no sea una lista de textos (`BLOCKED_STATUS_INVALID`). **No mueve la clave de cache**: se aplica al armar el informe. Se edita en Conexión → Particularidades (`setBlockedStatus`).
 - **Capas por componente** (informe de cierre): `jira.componentLayers: Array<{ projectKey, componentId, componentName, layer: 'frontend' | 'backend' | 'functional' }>`, default `[]`. Se mapea por clave de proyecto Jira + id de componente (los nombres cambian entre proyectos). `normalizeConfig` descarta entradas mal formadas y repetidas (gana la última); `validateConfig` rechaza claves y capas inválidas (`COMPONENT_LAYER_*`). **No mueve la clave de cache**: las filas ya traen todos sus componentes y la capa se resuelve al armar el informe.
 
 ### 8.5 Estado de vista

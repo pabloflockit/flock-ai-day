@@ -178,6 +178,25 @@
     </div>
   }
 
+  <section data-testid="blocked-statuses" class="layers">
+    <h3>Estados bloqueados</h3>
+    <p class="field-hint">Los ítems en estos estados cuentan como bloqueados en el informe de cierre.</p>
+    @if (statuses().length === 0) {
+      <p class="field-hint">Cargá los estados de Jira para elegir cuáles bloquean.</p>
+    }
+    @for (s of statuses(); track s.id) {
+      <label class="choice">
+        <input
+          type="checkbox"
+          [attr.aria-label]="'Bloqueado: ' + s.name"
+          [checked]="isBlocked(s.id)"
+          (change)="setBlockedStatus(s.id, $any($event.target).checked)"
+        />
+        {{ s.name }}
+      </label>
+    }
+  </section>
+
   <section data-testid="component-layers" class="layers">
     <h3>Capas por componente</h3>
     <p class="field-hint">

@@ -138,3 +138,17 @@ test('componentLayers: bad project keys and layers are rejected with codes', () 
   assert.deepEqual(issues([entry(), entry({ componentId: '2', layer: 'qa' })]), ['COMPONENT_LAYER_INVALID@jira.componentLayers[1].layer']);
   assert.deepEqual(issues([entry(), entry({ layer: 'backend' })]), ['COMPONENT_LAYER_DUPLICATE@jira.componentLayers[1].componentId']);
 });
+
+test('blockedStatusIds: non-array and non-string entries are rejected with a code', () => {
+  const issues = (value) => {
+    const config = normalizeConfig(base());
+    config.jira.blockedStatusIds = value;
+    return validateConfig(config).map((i) => `${i.code}@${i.path}`);
+  };
+  assert.deepEqual(issues(['10', '11']), []);
+  assert.deepEqual(issues('10'), ['BLOCKED_STATUS_INVALID@jira.blockedStatusIds']);
+  assert.deepEqual(issues(['10', 7, '']), [
+    'BLOCKED_STATUS_INVALID@jira.blockedStatusIds[1]',
+    'BLOCKED_STATUS_INVALID@jira.blockedStatusIds[2]',
+  ]);
+});
