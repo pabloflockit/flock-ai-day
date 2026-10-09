@@ -29,3 +29,7 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
+# Angular / TypeScript build output
+out-tsc/
+*.tsbuildinfo

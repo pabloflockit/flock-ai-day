@@ -9,7 +9,7 @@ Branch: `feat/foundation`.
 
 ## Tasks
 
-- [ ] 1. Reference audit — `docs/reference-audit.md` (rule → status → evidence → resolution → effort) and `docs/decisions.md` seeded with reference commit and language/stack decisions.
+- [x] 1. Reference audit — `docs/reference-audit.md` (rule → status → evidence → resolution → effort) and `docs/decisions.md` seeded with reference commit and language/stack decisions.
 - [ ] 2. Skeleton — package.json, Angular app (standalone, signals, hash routing, lazy pages), Electron main/preload, in-process proxy on 127.0.0.1 with dynamic port, `node --test` setup.
 - [ ] 3. Security — session secret (`X-Proxy-Secret`), `safeStorage` token + data key, write-only token endpoint, Jira URL validation, outbound host allowlist, preload bridge (`openInJira`, `copyText`, `saveMarkdown`), CSP, navigation blocking.
 - [ ] 4. Cache and config — `node:sqlite` schema, AES-256-GCM payloads and config, dataset read/write, `resolveTarget`, `normalizeConfig`, `validateConfig` base.
@@ -20,3 +20,5 @@ Branch: `feat/foundation`.
 ## Evidence
 
 (commit ids and check results recorded per task)
+
+- Task 1: `d21241d` — audit and decisions written; grep confirmed no hostnames, emails, or tokens. Reference left untouched (clean `git status`).
