@@ -158,7 +158,7 @@ export class SyncPage {
     }
   }
 
-  /** Publishes a status, keeps the timer in step with `running`, and refreshes the data when a run ends. */
+  /** Publishes a status, keeps the timer in step with `running`, and refreshes the data (config, stale dataset keys, project meta) when a run ends. */
   #apply(status: SyncStatus): void {
     const wasRunning = this.running();
     this.status.set(status);
@@ -168,6 +168,7 @@ export class SyncPage {
       this.#stopPolling();
       if (wasRunning) {
         void this.#store.reloadConfig();
+        this.#store.invalidateDatasets();
         void this.#loadMetas();
       }
     }

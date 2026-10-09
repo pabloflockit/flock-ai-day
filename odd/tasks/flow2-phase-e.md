@@ -26,7 +26,7 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
       unit assigned to a member (todo segment), tests and fixture lint green.
 - [ ] 1b. Public docs — sanitized `docs/architecture.md` and `docs/plan.md` tracked; originals and
       `reference-audit.md` in `docs/private/`; no the reference app / `repoFedPat` left in tracked files.
-- [ ] 1c. Dashboard refresh after sync — the dashboard must show new data after a sync without a reload.
+- [x] 1c. Dashboard refresh after sync — the dashboard must show new data after a sync without a reload.
 - [ ] 2. Screenshots — demo mode, dark and light, into `docs/screenshots/` (dashboard, outside view, drill-down,
       report, teams, sync).
 - [ ] 3. README — rewrite per plan §9 phase E, with the screenshots.
@@ -41,3 +41,10 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
   todo/doing/done segments, Carla under "Asignado a otras personas", "Agregar al equipo" search preloaded and finds
   her. Finding: after "Carga completa" the dashboard showed the new data only after a page reload (bug, see task 1c).
   Commit: `test(demo): extend demo fixtures to cover every dashboard block`.
+- Task 1c (worker, test-first): root cause in `AppStore` — `#hydratedKeys` never cleared after a sync, and the
+  `ensureHydrated` guard dropped any read when rows existed. Fix: the guard now skips only reads that are not strictly
+  newer (`isNewer` on `fetchedAt`); new `invalidateDatasets()` clears hydrated keys except refreshing ones (rows stay
+  visible); `SyncPage` calls it when a run ends, next to `reloadConfig()`. RED observed for the two new behaviors
+  (TS2339: `invalidateDatasets` missing); the "older read never overwrites a newer refresh" spec passed before and
+  after (regression guard). Karma 169/169, node 468/468, `build:desktop` OK.
+  Commit: `fix(store): re-read datasets after a sync run`.

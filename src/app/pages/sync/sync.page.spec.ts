@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { normalizeConfig } from '../../../../proxy/config/normalize.mjs';
 import { ProxyClient, ProxyError } from '../../core/proxy-client';
 import { ConfirmService } from '../../shared/ui/confirm.service';
+import { AppStore } from '../../core/store/app-store';
 import { SyncPage } from './sync.page';
 
 const IDLE = {
@@ -244,6 +245,18 @@ describe('SyncPage', () => {
     expect(configReads()).toBe(2);
     await tick(5000);
     expect(configReads()).toBe(2);
+  });
+
+  it('invalidates the hydrated datasets and reloads the config when a run goes from running to done', async () => {
+    const { render, tick, fixture } = setup({ statuses: [running(1), finished()] });
+    const store = fixture.debugElement.injector.get(AppStore);
+    const invalidate = spyOn(store, 'invalidateDatasets').and.callThrough();
+    const reload = spyOn(store, 'reloadConfig').and.callThrough();
+    await render();
+    expect(invalidate).not.toHaveBeenCalled();
+    await tick();
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 
   it('starting a run polls until it finishes, with the last run failed epics listed', async () => {

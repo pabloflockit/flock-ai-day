@@ -65,6 +65,12 @@ export interface AppState {
   view: ViewState;
 }
 
+/** True when `candidate` is strictly newer than `held`; a null `candidate` never is. */
+function isNewer(candidate: string | null, held: string): boolean {
+  if (candidate === null) return false;
+  return Date.parse(candidate) > Date.parse(held);
+}
+
 type DatasetView = Pick<DatasetState, 'rows' | 'fetchedAt' | 'isCurrent' | 'shardsMeta'>;
 
 const initialState: AppState = {
@@ -232,7 +238,8 @@ export class AppStore {
    *
    * Idempotent per cache key (`Set<string>` of keys loaded or in flight). A TRANSPORT error
    * (the proxy may still be starting) removes the key again so the next call retries; an error
-   * the proxy answered with keeps it, so a failing key is not hammered.
+   * the proxy answered with keeps it, so a failing key is not hammered. A read only replaces rows
+   * already held when its `fetchedAt` is newer (see `invalidateDatasets`).
    */
   ensureHydrated(source: DatasetSource, scope: Scope, params: unknown): void {
     const cacheKey = this.cacheKeyFor(source, scope, params);
@@ -244,9 +251,14 @@ export class AppStore {
     this.#proxy
       .get<DatasetView>(path)
       .then((view) => {
-        // A refresh that finished first holds newer rows: never let this read land on top.
+        // A refresh that finished first holds newer rows: never let an older or equal read land on top.
         const current = this.#state().datasets[cacheKey];
-        if (current?.status === 'ready' && current.fetchedAt !== null) return;
+        if (current?.fetchedAt != null && !isNewer(view.fetchedAt, current.fetchedAt)) {
+          if (!this.#refreshing.has(cacheKey) && current.status === 'loading') {
+            this.#patchDataset(cacheKey, { status: 'ready' });
+          }
+          return;
+        }
         this.#patchDataset(cacheKey, {
           ...view,
           status: this.#refreshing.has(cacheKey) ? 'loading' : 'ready',
@@ -259,6 +271,18 @@ export class AppStore {
         }
         this.#patchDataset(cacheKey, { status: 'error', error: toStoreError(error) });
       });
+  }
+
+  /**
+   * Marks every loaded dataset as stale after a sync run: `#hydratedKeys` is cleared (keys that are
+   * refreshing right now are kept, their refresh still lands), so the next `ensureHydrated` per key
+   * reads the proxy again. Rows stay visible (stale, not empty) until a read with a newer
+   * `fetchedAt` replaces them.
+   */
+  invalidateDatasets(): void {
+    for (const key of [...this.#hydratedKeys]) {
+      if (!this.#refreshing.has(key)) this.#hydratedKeys.delete(key);
+    }
   }
 
   /**

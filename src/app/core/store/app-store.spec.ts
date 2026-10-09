@@ -104,6 +104,47 @@ describe('AppStore dataset hydration', () => {
     expect(store.datasets()[cacheKey].error).toEqual({ code: 'DATA_KEY_INVALID', message: 'no' });
   });
 
+  it('invalidateDatasets makes the next ensureHydrated read again and a newer view replaces the rows', async () => {
+    const older = { ...view('A-1'), fetchedAt: '2026-03-01T10:00:00.000Z' };
+    const newer = { ...view('A-2'), fetchedAt: '2026-03-02T10:00:00.000Z' };
+    const get = jasmine.createSpy('get').and.returnValues(Promise.resolve(older), Promise.resolve(newer));
+    const store = setup({ get });
+    const cacheKey = resolveTarget(epic, 'epicIssues', params).cacheKey;
+
+    store.ensureHydrated('epicIssues', epic, params);
+    await flush();
+    store.ensureHydrated('epicIssues', epic, params);
+    expect(get).toHaveBeenCalledTimes(1);
+
+    store.invalidateDatasets();
+    expect(store.datasets()[cacheKey].rows.length).toBe(1); // stale, not empty
+    store.ensureHydrated('epicIssues', epic, params);
+    await flush();
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(store.datasets()[cacheKey].fetchedAt).toBe(newer.fetchedAt);
+    expect((store.datasets()[cacheKey].rows[0] as unknown as { key: string }).key).toBe('A-2');
+    expect(store.datasets()[cacheKey].status).toBe('ready');
+  });
+
+  it('a read older than the rows of a refresh that finished first never overwrites them', async () => {
+    const stale = { ...view('OLD'), fetchedAt: '2026-03-01T10:00:00.000Z' };
+    const fresh = { ...view('NEW'), fetchedAt: '2026-03-02T10:00:00.000Z' };
+    let resolveGet!: (v: unknown) => void;
+    const get = jasmine.createSpy('get').and.returnValue(new Promise((r) => (resolveGet = r)));
+    const post = jasmine.createSpy('post').and.returnValue(Promise.resolve(fresh));
+    const store = setup({ get, post });
+    const cacheKey = resolveTarget(epic, 'epicIssues', params).cacheKey;
+
+    store.ensureHydrated('epicIssues', epic, params);
+    await store.refreshDataset('epicIssues', epic, params);
+    resolveGet(stale);
+    await flush();
+
+    expect((store.datasets()[cacheKey].rows[0] as unknown as { key: string }).key).toBe('NEW');
+    expect(store.datasets()[cacheKey].fetchedAt).toBe(fresh.fetchedAt);
+  });
+
   it('a failed refresh keeps the previous rows and coalesces concurrent calls', async () => {
     const post = jasmine
       .createSpy('post')
