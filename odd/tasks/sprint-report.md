@@ -23,9 +23,11 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 
 ## Decisions (user, 2026-10-09)
 
-- Layers come from Jira COMPONENTS: per project, the user picks from the component list Jira returns which
-  components map to Frontend, Backend or Funcional (VERIFY the components endpoint and the `components` issue field
-  with a read-only call before coding; plan rule: never invent Jira endpoints or fields).
+- Layers come ONLY from Jira COMPONENTS (user decision after the kickoff verification): per Jira project, the user
+  picks from the component list Jira returns which components map to Frontend, Backend or Funcional (stored by Jira
+  project key + component id). An issue without a mapped component goes to a "Sin capa" section. A primary without
+  its own mapped component is still shown as context ("ref.", not counted) above its subtasks in their layers.
+  An issue mapped to two layers is listed in each and flagged as a hygiene note.
 - Period: a free date range the user picks (no Jira sprints).
 - Work of team members outside the team's epics goes to a SEPARATE section, for tracking.
 - HTML export: add a `saveHtml` bridge function (validated in main, `.html` only).
@@ -47,3 +49,16 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       plan §8.2.
 
 ## Evidence
+- Kickoff verification (read-only, real instance, user go-ahead "arranquemos"; scripts in `%TEMP%lock-verify`,
+  outside the repo, credentials never printed):
+  - `GET /rest/api/3/project/{key}/components` -> 200, a plain array (not paginated) of
+    `{ self, id, name, assigneeType, realAssigneeType, isAssigneeTypeValid, project, projectId }`; two team projects
+    returned 47 and 45 components.
+  - Issue field `components` (via `/rest/api/3/search/jql?fields=components`) -> array of `{ self, id, name }`;
+    issues often carry SEVERAL components.
+  - Development subtasks (type "Subtarea") carry a layer component (`FRONTEND`/`BACKEND` in one project,
+    `Frontend`/`Backend` in the other: names differ per project -> map by Jira project + component id).
+  - "Analisis" subtasks have no components; primaries (Historia, Mejora, Error) usually carry only an area component.
+    In the user's reference report those rows sit in a layer by their ASSIGNEE (e.g. "Primaria asignada a FE").
+  - Consequence: components alone cannot place primaries, analysis subtasks or functional follow-up; a fallback
+    by assignee was offered; the user chose components only, with a "Sin capa" section.
