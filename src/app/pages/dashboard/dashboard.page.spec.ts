@@ -107,7 +107,7 @@ describe('DashboardPage', () => {
       const { el } = await render(config, datasets);
       const titles = Array.from(el.querySelectorAll('app-dashboard-group h2')).map((h) => h.textContent?.trim());
       expect(titles).toEqual(['Tareas · Cantidad', 'Subtareas · Estimación (h)']);
-      expect(el.querySelector('.outside')?.textContent).toContain('0 unidades fuera del equipo');
+      expect(el.querySelector('.outside-counter')?.textContent).toContain('0 unidades fuera del equipo');
     });
 
     it('reports missing measure data, tasks without subtasks and the lack of done data', async () => {

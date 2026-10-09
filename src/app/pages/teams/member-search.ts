@@ -3,12 +3,16 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   inject,
   input,
   output,
   signal,
+  untracked,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { addMember } from '../../../../shared/config-edit.mjs';
+import type { AppConfig } from '../../../../proxy/config/normalize.mjs';
 import { initials, userSearchHits } from '../../../../shared/config-view.mjs';
 import { idle, track, type Op } from '../../core/op';
 import { ProxyClient } from '../../core/proxy-client';
@@ -24,6 +28,17 @@ export interface JiraUserHit {
   emailAddress: string | null;
   /** Present in Jira responses; the typed hit view omits it. */
   active?: boolean;
+}
+
+/** Config edit that adds a Jira search result to a team; member data always comes from Jira's answer. */
+export function addJiraUser(teamId: string, user: JiraUserHit): (config: AppConfig) => ReturnType<typeof addMember> {
+  return (config) =>
+    addMember(
+      config,
+      teamId,
+      { accountId: user.accountId, displayName: user.displayName, emailAddress: user.emailAddress, active: user.active ?? true },
+      new Date().toISOString(),
+    );
 }
 
 /**
@@ -42,6 +57,8 @@ export class MemberSearch {
   readonly #proxy = inject(ProxyClient);
 
   readonly teamId = input.required<string>();
+  /** Text the search starts with (runs right away, without debounce, once Jira is ready). */
+  readonly initialQuery = input('');
   readonly add = output<JiraUserHit>();
 
   readonly initials = initials;
@@ -60,6 +77,14 @@ export class MemberSearch {
   constructor() {
     // A pending search must not fire after the page is left.
     inject(DestroyRef).onDestroy(() => clearTimeout(this.#timer));
+    let started = false;
+    effect(() => {
+      const text = this.initialQuery().trim();
+      if (started || !this.jiraReady() || text.length < MIN_QUERY_LENGTH) return;
+      started = true;
+      const id = ++this.#latest;
+      untracked(() => void this.#run(text, id));
+    });
   }
 
   onInput(value: string): void {

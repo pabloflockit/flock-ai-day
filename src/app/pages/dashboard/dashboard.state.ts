@@ -5,8 +5,10 @@ import {
   measureKeyOf,
   measurementGroups,
   progress,
+  othersOpenByPerson,
   staleUnits,
   statusDistribution,
+  unassignedOpen,
   weeklyThroughput,
   workInProgress,
 } from '../../../../shared/domain/metrics.mjs';
@@ -120,6 +122,27 @@ export class DashboardState {
     const outside = config && teamId ? teamOutside(this.units(), teamId, config) : { unassigned: [], others: [] };
     return { unassigned: this.#filter(outside.unassigned), others: this.#filter(outside.others) };
   });
+  /**
+   * F1 and F2 per measurement group (same grouping as the main view, so measures never mix).
+   * People who are inactive members of the selected team are flagged to offer reactivation.
+   */
+  readonly outsideGroups = computed(() => {
+    const { unassigned, others } = this.outside();
+    const inactive = new Set(this.team()?.members.filter((m) => !m.active).map((m) => m.accountId));
+    return measurementGroups([...unassigned, ...others], this.projects())
+      .map((group) => {
+        const split = {
+          unassigned: group.units.filter((u) => u.assigneeAccountId === null),
+          others: group.units.filter((u) => u.assigneeAccountId !== null),
+        };
+        return {
+          ...group,
+          unassigned: unassignedOpen(split),
+          people: othersOpenByPerson(split).map((p) => ({ ...p, inactiveMember: inactive.has(p.accountId) })),
+        };
+      })
+      .filter((g) => g.unassigned.count > 0 || g.people.length > 0);
+  });
   readonly outsideOpenCount = computed(() => {
     const { unassigned, others } = this.outside();
     return [...unassigned, ...others].filter((u) => u.statusCategory !== 'done').length;
@@ -162,3 +185,4 @@ export class DashboardState {
 }
 
 export type DashboardGroup = DashboardState['groups'] extends () => (infer G)[] ? G : never;
+export type OutsideGroup = DashboardState['outsideGroups'] extends () => (infer G)[] ? G : never;

@@ -5,6 +5,7 @@
     type="search"
     autocomplete="off"
     placeholder="Nombre o email"
+    [value]="initialQuery()"
     [disabled]="!jiraReady()"
     (input)="onInput($any($event.target).value)"
   />

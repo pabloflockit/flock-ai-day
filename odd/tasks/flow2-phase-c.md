@@ -33,7 +33,7 @@ work not assigned to the team appears only in its own section; statuses and char
 - [x] 3. Metrics M1–M6 and F1–F2 domain — test-first.
 - [x] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
 - [x] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
-- [ ] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
+- [x] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
 - [ ] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
 
 ## Evidence
@@ -67,3 +67,11 @@ work not assigned to the team appears only in its own section; statuses and char
   `build:desktop` OK, no warnings. Specs were written after the code (no RED). Demo dark screenshot by the worker:
   one group renders correctly; two side-by-side groups and the todo grey were not seen rendered.
   Commit: `feat(dashboard): add metrics UI with drill-down`.
+- Task 6 (worker): in-page view switch "Equipo" | "Fuera del equipo (N)" (header counter switches too; same
+  selection, no refetch); `dashboard-outside` with F1 "Sin asignar" and F2 "Asignado a otras personas" per
+  measurement group (state `outsideGroups`); "Agregar al equipo" = `add-member-modal` wrapping the team
+  `MemberSearch` with a new `initialQuery` input; shared `addJiraUser` op now used by the team screen too (member data
+  always from Jira's result); inactive members get "Reactivar" (`setMemberActive`). Karma 157/157 (7 new, RED observed
+  7/7 before the code), node 457/457, `build:desktop` OK. Outside-only Karma spec: unassigned and other-person units
+  absent from `groups()` and shown only in the outside view. No screenshot taken.
+  Commit: `feat(dashboard): add outside-the-team view with add to team`.

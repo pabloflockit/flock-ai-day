@@ -1,0 +1,32 @@
+// "Fuera del equipo" — Flock Design System tokens only (docs/design/design-system.md).
+:host {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    margin-block-end: var(--space-2);
+    font-size: var(--fs-body);
+    color: var(--text-soft);
+  }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

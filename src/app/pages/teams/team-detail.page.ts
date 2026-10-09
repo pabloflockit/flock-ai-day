@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
-  addMember,
   addProject,
   removeMember,
   removeProject,
@@ -16,7 +15,7 @@ import { ConfirmService } from '../../shared/ui/confirm.service';
 import { Icon } from '../../shared/ui/icon';
 import { Modal } from '../../shared/ui/modal';
 import { measureSummary } from '../projects/measure-summary';
-import { MemberSearch, type JiraUserHit } from './member-search';
+import { addJiraUser, MemberSearch, type JiraUserHit } from './member-search';
 
 type Tab = 'members' | 'projects';
 
@@ -129,16 +128,7 @@ export class TeamDetailPage {
 
   async addMember(user: JiraUserHit): Promise<void> {
     const teamId = this.teamId();
-    await this.#editor.apply(
-      (c) =>
-        addMember(
-          c,
-          teamId,
-          { accountId: user.accountId, displayName: user.displayName, emailAddress: user.emailAddress, active: user.active ?? true },
-          new Date().toISOString(),
-        ),
-      'Integrante agregado.',
-    );
+    await this.#editor.apply(addJiraUser(teamId, user), 'Integrante agregado.');
   }
 
   async toggleMember(accountId: string, active: boolean): Promise<void> {

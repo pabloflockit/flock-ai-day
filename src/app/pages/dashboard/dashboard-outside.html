@@ -1,0 +1,69 @@
+@for (group of groups(); track group.unitType + group.measureKey) {
+  <section class="card group" [attr.aria-label]="title(group)">
+    <h2>{{ title(group) }}</h2>
+
+    <div class="f1">
+      <h3>Sin asignar</h3>
+      @if (group.unassigned.count === 0) {
+        <p class="field-hint">No hay unidades sin asignar.</p>
+      } @else {
+        <p>
+          <button type="button" class="num-link" (click)="show(group, 'Sin asignar', group.unassigned.units)">
+            {{ amount(group, group.unassigned) }}
+          </button>
+          @if (group.unassigned.missingMeasure.length > 0) {
+            ·
+            <button type="button" class="num-link missing" (click)="show(group, 'Sin medida · Sin asignar', group.unassigned.missingMeasure)">
+              {{ missingText(group, group.unassigned.missingMeasure.length) }}
+            </button>
+          }
+        </p>
+      }
+    </div>
+
+    <div class="f2">
+      <h3>Asignado a otras personas</h3>
+      @if (group.people.length === 0) {
+        <p class="field-hint">No hay unidades asignadas a otras personas.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Abiertas</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (person of group.people; track person.accountId) {
+                <tr>
+                  <td>{{ person.displayName }}</td>
+                  <td>
+                    <button type="button" class="num-link" (click)="show(group, person.displayName, person.units)">
+                      {{ amount(group, person) }}
+                    </button>
+                    @if (person.missingMeasure.length > 0) {
+                      ·
+                      <button type="button" class="num-link missing" (click)="show(group, 'Sin medida · ' + person.displayName, person.missingMeasure)">
+                        {{ missingText(group, person.missingMeasure.length) }}
+                      </button>
+                    }
+                  </td>
+                  <td class="actions">
+                    @if (person.inactiveMember) {
+                      <span class="status-chip state-pending">Inactivo en el equipo</span>
+                      <button type="button" class="btn-small" (click)="reactivate.emit(person)">Reactivar</button>
+                    } @else {
+                      <button type="button" class="btn-small" (click)="addToTeam.emit(person)">Agregar al equipo</button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  </section>
+}

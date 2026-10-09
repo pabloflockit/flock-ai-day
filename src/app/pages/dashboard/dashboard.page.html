@@ -1,10 +1,10 @@
 <header class="page-header">
   <h1>Dashboard</h1>
   @if (configState().status === 'ready' && state.activeTeams().length > 0) {
-    <p class="outside">
+    <button type="button" class="outside-counter" (click)="view.set('outside')">
       {{ state.outsideOpenCount() }}
       {{ state.outsideOpenCount() === 1 ? 'unidad fuera del equipo' : 'unidades fuera del equipo' }}
-    </p>
+    </button>
   }
 </header>
 
@@ -74,7 +74,31 @@
       }
     </section>
 
-    @if (state.projects().length === 0) {
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" [class.active]="view() === 'team'" [attr.aria-selected]="view() === 'team'" (click)="view.set('team')">
+        Equipo
+      </button>
+      <button type="button" class="tab" role="tab" [class.active]="view() === 'outside'" [attr.aria-selected]="view() === 'outside'" (click)="view.set('outside')">
+        Fuera del equipo ({{ state.outsideOpenCount() }})
+      </button>
+    </div>
+
+    @if (view() === 'outside') {
+      @if (state.outsideGroups().length === 0) {
+        @if (!state.loading()) {
+          <div class="card empty">
+            <p>Todo el trabajo de las épicas del equipo está asignado a integrantes.</p>
+          </div>
+        }
+      } @else {
+        <app-dashboard-outside
+          [groups]="state.outsideGroups()"
+          (drill)="drill.set($event)"
+          (addToTeam)="adding.set($event)"
+          (reactivate)="reactivate($event)"
+        />
+      }
+    } @else if (state.projects().length === 0) {
       <div class="card empty"><p>Este equipo no tiene proyectos activos.</p><div><a routerLink="/teams">Ir a Equipos</a></div></div>
     } @else if (state.missingDatasets().length === state.projects().length) {
       <div class="card empty">
@@ -94,6 +118,12 @@
         }
       </div>
     }
+  }
+}
+
+@if (adding(); as person) {
+  @if (state.teamId(); as teamId) {
+    <app-add-member-modal [teamId]="teamId" [query]="person.displayName" (closed)="adding.set(null)" />
   }
 }
 
