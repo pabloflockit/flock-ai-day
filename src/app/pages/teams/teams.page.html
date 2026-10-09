@@ -1,0 +1,111 @@
+<header class="page-header">
+  <h1>Equipos</h1>
+  @if (summaries().length > 0) {
+    <button type="button" (click)="openCreate()"><app-icon name="plus" /> Nuevo equipo</button>
+  }
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+} @else if (configState().status === 'ready') {
+  @if (summaries().length === 0) {
+    <div class="card empty">
+      <p>Todavía no hay equipos.</p>
+      <div><button type="button" (click)="openCreate()"><app-icon name="plus" /> Nuevo equipo</button></div>
+    </div>
+  } @else {
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Estado</th>
+            <th class="num">Integrantes</th>
+            <th class="num">Proyectos</th>
+            <th class="num">Épicas</th>
+            <th><span class="visually-hidden">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of summaries(); track s.team.id) {
+            <tr>
+              <td>
+                <a [routerLink]="['/teams', s.team.id]">{{ s.team.name }}</a>
+                @if (s.team.description) {
+                  <div class="field-hint">{{ s.team.description }}</div>
+                }
+              </td>
+              <td>
+                @if (s.team.active) {
+                  <span class="status-chip state-done">Activo</span>
+                } @else {
+                  <span class="status-chip state-pending">Inactivo</span>
+                }
+              </td>
+              <td class="num text-mono">{{ s.members }}</td>
+              <td class="num text-mono">{{ s.projects }}</td>
+              <td class="num text-mono">{{ s.epics }}</td>
+              <td>
+                <div class="actions">
+                  <button type="button" class="btn-ghost btn-small" (click)="openEdit(s.team.id, s.team.name, s.team.description)">
+                    Editar
+                  </button>
+                  <button type="button" class="btn-ghost btn-small" (click)="toggleActive(s.team.id, !s.team.active)">
+                    {{ s.team.active ? 'Desactivar' : 'Activar' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-ghost btn-small"
+                    [disabled]="s.projects > 0"
+                    [attr.title]="s.projects > 0 ? 'No se puede eliminar: el equipo tiene proyectos. Eliminalos o movelos primero.' : null"
+                    (click)="remove(s.team.id, s.team.name)"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
+@if (form(); as f) {
+  <app-modal [title]="f.id ? 'Editar equipo' : 'Nuevo equipo'" (closed)="closeForm()">
+    <div class="field">
+      <label for="team-name">Nombre</label>
+      <input
+        id="team-name"
+        type="text"
+        autocomplete="off"
+        [value]="name()"
+        (input)="name.set($any($event.target).value)"
+        (keydown.enter)="submit()"
+      />
+      @if (nameError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+    <div class="field">
+      <label for="team-description">Descripción</label>
+      <textarea
+        id="team-description"
+        rows="3"
+        [value]="description()"
+        (input)="description.set($any($event.target).value)"
+      ></textarea>
+    </div>
+    @if (formError(); as message) {
+      <p class="field-error" role="alert">{{ message }}</p>
+    }
+    <ng-container modal-actions>
+      <button type="button" class="btn-ghost" (click)="closeForm()">Cancelar</button>
+      <button type="button" [disabled]="saving()" (click)="submit()">{{ f.id ? 'Guardar' : 'Crear' }}</button>
+    </ng-container>
+  </app-modal>
+}

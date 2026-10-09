@@ -1,0 +1,54 @@
+<div class="field">
+  <label for="member-search">Buscar en Jira</label>
+  <input
+    id="member-search"
+    type="search"
+    autocomplete="off"
+    placeholder="Nombre o email"
+    [disabled]="!jiraReady()"
+    (input)="onInput($any($event.target).value)"
+  />
+  @if (!jiraReady()) {
+    <span class="field-hint">
+      Configurá la conexión con Jira para buscar personas.
+      <a routerLink="/connection">Ir a Conexión</a>
+    </span>
+  }
+</div>
+
+@switch (search().status) {
+  @case ('loading') {
+    <p class="field-hint">Buscando…</p>
+  }
+  @case ('error') {
+    <p class="field-error" role="alert">{{ search().error?.message }} (código: {{ search().error?.code }})</p>
+  }
+  @case ('ok') {
+    @if (hits().length === 0) {
+      <p class="field-hint">Sin resultados.</p>
+    } @else {
+      <ul class="hits">
+        @for (hit of hits(); track hit.user.accountId) {
+          <li>
+            <span class="avatar" aria-hidden="true">{{ initials(hit.user.displayName) }}</span>
+            <span class="who">
+              <strong>{{ hit.user.displayName }}</strong>
+              @if (hit.user.emailAddress) {
+                <span class="field-hint">{{ hit.user.emailAddress }}</span>
+              }
+              @if (hit.otherTeams.length > 0) {
+                <span class="field-hint">También en: {{ hit.otherTeams.join(', ') }}</span>
+              }
+            </span>
+            @if (hit.inThisTeam) {
+              <span class="status-chip state-pending">Ya está en el equipo</span>
+            }
+            <button type="button" class="btn-small" [disabled]="hit.inThisTeam" (click)="add.emit(hit.user)">
+              Agregar
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

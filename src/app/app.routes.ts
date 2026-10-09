@@ -12,5 +12,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/diagnostics/diagnostics.page').then((m) => m.DiagnosticsPage),
   },
+  {
+    path: 'teams',
+    loadComponent: () => import('./pages/teams/teams.page').then((m) => m.TeamsPage),
+  },
+  {
+    path: 'teams/:id',
+    loadComponent: () => import('./pages/teams/team-detail.page').then((m) => m.TeamDetailPage),
+  },
   { path: '**', redirectTo: 'connection' },
 ];

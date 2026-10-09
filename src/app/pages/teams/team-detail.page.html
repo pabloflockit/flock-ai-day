@@ -1,0 +1,143 @@
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+} @else if (configState().status === 'ready') {
+  @if (team(); as t) {
+    <header class="page-header">
+      <div>
+        <a routerLink="/teams" class="back">Equipos</a>
+        <h1>
+          {{ t.name }}
+          @if (t.active) {
+            <span class="status-chip state-done">Activo</span>
+          } @else {
+            <span class="status-chip state-pending">Inactivo</span>
+          }
+        </h1>
+        @if (t.description) {
+          <p class="field-hint">{{ t.description }}</p>
+        }
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.active]="tab() === 'members'"
+        [attr.aria-selected]="tab() === 'members'"
+        (click)="tab.set('members')"
+      >
+        Integrantes ({{ t.members.length }})
+      </button>
+      <button
+        type="button"
+        class="tab"
+        role="tab"
+        [class.active]="tab() === 'projects'"
+        [attr.aria-selected]="tab() === 'projects'"
+        (click)="tab.set('projects')"
+      >
+        Proyectos ({{ projects().length }})
+      </button>
+    </div>
+
+    @if (tab() === 'members') {
+      <app-member-search [teamId]="t.id" (add)="addMember($event)" />
+
+      @if (t.members.length === 0) {
+        <div class="card"><p>Este equipo no tiene integrantes todavía.</p></div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Integrante</th>
+                <th>Email</th>
+                <th>Estado</th>
+                <th><span class="visually-hidden">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of t.members; track m.accountId) {
+                <tr>
+                  <td>
+                    <div class="person">
+                      <span class="avatar" aria-hidden="true">{{ initials(m.displayName) }}</span>
+                      <span>
+                        {{ m.displayName }}
+                        @if (otherTeams().get(m.accountId); as others) {
+                          @if (others.length > 0) {
+                            <div class="field-hint">También en: {{ others.join(', ') }}</div>
+                          }
+                        }
+                      </span>
+                    </div>
+                  </td>
+                  <td>{{ m.emailAddress ?? '—' }}</td>
+                  <td>
+                    @if (!m.active) {
+                      <span class="status-chip state-pending">Inactivo</span>
+                    }
+                    @if (!m.jiraActive) {
+                      <span class="status-chip state-blocked">Desactivado en Jira</span>
+                    }
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <button type="button" class="btn-ghost btn-small" (click)="toggleMember(m.accountId, !m.active)">
+                        {{ m.active ? 'Desactivar' : 'Activar' }}
+                      </button>
+                      <button type="button" class="btn-ghost btn-small" (click)="removeMember(m.accountId, m.displayName)">
+                        Quitar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    } @else {
+      @if (projects().length === 0) {
+        <div class="card"><p>Este equipo no tiene proyectos.</p></div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Estado</th>
+                <th class="num">Épicas</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of projects(); track p.id) {
+                <tr>
+                  <td>{{ p.name }}</td>
+                  <td>
+                    @if (p.active) {
+                      <span class="status-chip state-done">Activo</span>
+                    } @else {
+                      <span class="status-chip state-pending">Inactivo</span>
+                    }
+                  </td>
+                  <td class="num text-mono">{{ p.epics.length }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  } @else {
+    <div class="card">
+      <p>El equipo no existe.</p>
+      <a routerLink="/teams">Volver a Equipos</a>
+    </div>
+  }
+}

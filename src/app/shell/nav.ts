@@ -17,6 +17,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     title: 'Administración',
     items: [
       { label: 'Conexión', path: '/connection', icon: 'link' },
+      { label: 'Equipos', path: '/teams', icon: 'team' },
       { label: 'Diagnóstico', path: '/diagnostics', icon: 'shield-check' },
     ],
   },

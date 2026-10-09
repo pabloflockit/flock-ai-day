@@ -510,3 +510,18 @@ button.btn-icon {
 button.toast-close {
   padding: 2px var(--space-2);
 }
+
+// ---- Avatar (initials) --------------------------------------------------------------------
+.avatar {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-soft);
+}
