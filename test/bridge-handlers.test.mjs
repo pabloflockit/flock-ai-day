@@ -73,3 +73,31 @@ describe('saveMarkdown', () => {
     assert.equal(log.dialogs.length, 0);
   });
 });
+
+describe('saveHtml', () => {
+  test('shows an .html-filtered dialog with a sanitized name and writes the file', async () => {
+    const { handlers, log } = setup({ savePath: '/home/u/out.HTML' });
+    assert.deepEqual(await handlers.saveHtml('../x.txt', '<p>hi</p>'), { ok: true });
+    assert.equal(log.dialogs[0].defaultPath, 'x.html');
+    assert.deepEqual(log.dialogs[0].filters, [{ name: 'HTML', extensions: ['html'] }]);
+    assert.deepEqual(log.written, [['/home/u/out.HTML', '<p>hi</p>']]);
+  });
+  test('canceled dialog writes nothing', async () => {
+    const { handlers, log } = setup({ savePath: null });
+    assert.deepEqual(await handlers.saveHtml('x', 'c'), { ok: true, canceled: true });
+    assert.equal(log.written.length, 0);
+  });
+  test('a non-.html chosen path is never written', async () => {
+    for (const savePath of ['C:\\Users\\u\\evil.exe', '/home/u/out.md', '/home/u/a.html.exe']) {
+      const { handlers, log } = setup({ savePath });
+      assert.deepEqual(await handlers.saveHtml('x', 'c'), { ok: false, error: 'INVALID_PATH' });
+      assert.equal(log.written.length, 0);
+    }
+  });
+  test('invalid content is rejected before any dialog', async () => {
+    const { handlers, log } = setup();
+    assert.equal((await handlers.saveHtml('x', 5)).ok, false);
+    assert.equal((await handlers.saveHtml('x', 'a'.repeat(5 * 1024 * 1024 + 1))).ok, false);
+    assert.equal(log.dialogs.length, 0);
+  });
+});

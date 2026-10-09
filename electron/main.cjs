@@ -190,6 +190,7 @@ function registerBridge() {
   register('bridge:openInJira', handlers.openInJira);
   register('bridge:copyText', handlers.copyText);
   register('bridge:saveMarkdown', handlers.saveMarkdown);
+  register('bridge:saveHtml', handlers.saveHtml);
 }
 
 function hardenWindow(win) {

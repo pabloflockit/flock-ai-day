@@ -6,6 +6,7 @@ const MAX_ISSUE_KEY_LENGTH = 64;
 const MAX_COPY_TEXT_LENGTH = 200_000;
 const MAX_FILE_NAME_LENGTH = 100;
 const MAX_MARKDOWN_BYTES = 5 * 1024 * 1024;
+const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const DEFAULT_FILE_NAME = 'report';
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
@@ -30,10 +31,11 @@ function validateCopyText(text) {
 }
 
 /**
- * Reduces a suggested name to a safe base name and forces the `.md` extension.
+ * Reduces a suggested name to a safe base name and forces the given extension (`.md` / `.html`).
  * @param {unknown} input
+ * @param {string} extension
  */
-function sanitizeMarkdownFileName(input) {
+function sanitizeFileName(input, extension) {
   let name = typeof input === 'string' ? input : '';
   name = name.split(/[\\/]/).pop() ?? '';
   name = name.replace(/[\u0000-\u001f<>:"|?*]/g, '_');
@@ -41,8 +43,14 @@ function sanitizeMarkdownFileName(input) {
   name = name.replace(/[. ]+$/, '').trim();
   if (name === '') name = DEFAULT_FILE_NAME;
   if (WINDOWS_RESERVED.test(name)) name = `${name}_`;
-  return `${name.slice(0, MAX_FILE_NAME_LENGTH - 3)}.md`;
+  return `${name.slice(0, MAX_FILE_NAME_LENGTH - extension.length)}${extension}`;
 }
+
+/** @param {unknown} input */
+const sanitizeMarkdownFileName = (input) => sanitizeFileName(input, '.md');
+
+/** @param {unknown} input */
+const sanitizeHtmlFileName = (input) => sanitizeFileName(input, '.html');
 
 /**
  * @param {unknown} suggestedName
@@ -53,6 +61,24 @@ function validateMarkdownRequest(suggestedName, content) {
     return { ok: false, error: 'INVALID_CONTENT' };
   }
   return { ok: true, value: { fileName: sanitizeMarkdownFileName(suggestedName), content } };
+}
+
+/**
+ * @param {unknown} suggestedName
+ * @param {unknown} content
+ */
+function validateHtmlRequest(suggestedName, content) {
+  if (typeof content !== 'string' || Buffer.byteLength(content, 'utf8') > MAX_HTML_BYTES) {
+    return { ok: false, error: 'INVALID_CONTENT' };
+  }
+  return { ok: true, value: { fileName: sanitizeHtmlFileName(suggestedName), content } };
+}
+
+/** @param {unknown} filePath */
+function isHtmlPath(filePath) {
+  if (typeof filePath !== 'string') return false;
+  const base = filePath.split(/[\\/]/).pop() ?? '';
+  return /^.+\.html$/i.test(base);
 }
 
 /** @param {unknown} filePath */
@@ -87,10 +113,14 @@ module.exports = {
   MAX_COPY_TEXT_LENGTH,
   MAX_FILE_NAME_LENGTH,
   MAX_MARKDOWN_BYTES,
+  MAX_HTML_BYTES,
   validateIssueKey,
   validateCopyText,
   sanitizeMarkdownFileName,
   validateMarkdownRequest,
   isMarkdownPath,
+  sanitizeHtmlFileName,
+  validateHtmlRequest,
+  isHtmlPath,
   buildIssueUrl,
 };

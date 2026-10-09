@@ -143,6 +143,7 @@ panel-liderazgo/
   - `openInJira(issueKey)`: el main arma la URL con la `baseUrl` configurada y la abre con `shell.openExternal`. El renderer nunca pasa URLs arbitrarias.
   - `copyText(text)`: copia al portapapeles con el módulo `clipboard` del main (para los informes).
   - `saveMarkdown(suggestedName, content)`: el main muestra el diálogo de guardado y escribe **solo** archivos `.md` en la ruta elegida por el usuario.
+  - `saveHtml(suggestedName, content)`: igual que `saveMarkdown`, pero **solo** archivos `.html` (informe de cierre de sprint; máx. 5 MB).
   - Nada más. Cada función valida sus argumentos en el main.
 - CSP restrictiva: `connect-src` solo `http://127.0.0.1:<puerto>`; sin contenido remoto en la ventana.
 - Bloquear navegación y `window.open`. Links externos solo mediante `openInJira`, hacia el host de Jira configurado.

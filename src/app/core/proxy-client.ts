@@ -13,6 +13,10 @@ declare global {
         suggestedName: string,
         content: string,
       ): Promise<{ ok: boolean; canceled?: boolean; error?: string }>;
+      saveHtml(
+        suggestedName: string,
+        content: string,
+      ): Promise<{ ok: boolean; canceled?: boolean; error?: string }>;
     };
   }
 }

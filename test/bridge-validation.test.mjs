@@ -117,3 +117,48 @@ describe('buildIssueUrl', () => {
     assert.equal(v.buildIssueUrl('http://acme.atlassian.net', 'ABC-1').ok, false);
   });
 });
+
+describe('sanitizeHtmlFileName', () => {
+  for (const [input, expected] of [
+    ['report', 'report.html'],
+    ['report.html', 'report.html'],
+    ['Report.HTML', 'Report.html'],
+    ['informe.md', 'informe.html'],
+    ['../../etc/passwd', 'passwd.html'],
+    ['C:\\temp\\a.html', 'a.html'],
+    ['con', 'con_.html'],
+    ['', 'report.html'],
+    [null, 'report.html'],
+  ]) {
+    test(`${JSON.stringify(input)} -> ${expected}`, () => assert.equal(v.sanitizeHtmlFileName(input), expected));
+  }
+  test('long names are bounded and still end with .html', () => {
+    const out = v.sanitizeHtmlFileName('a'.repeat(500));
+    assert.ok(out.length <= v.MAX_FILE_NAME_LENGTH && out.endsWith('.html'));
+  });
+});
+
+describe('validateHtmlRequest', () => {
+  test('normalizes the name and keeps the content', () => {
+    assert.deepEqual(v.validateHtmlRequest('x.txt', '<p>hi</p>'), {
+      ok: true,
+      value: { fileName: 'x.html', content: '<p>hi</p>' },
+    });
+  });
+  test('rejects non-string and oversized content', () => {
+    assert.equal(v.validateHtmlRequest('x', 5).ok, false);
+    assert.equal(v.validateHtmlRequest('x', 'a'.repeat(v.MAX_HTML_BYTES)).ok, true);
+    assert.equal(v.validateHtmlRequest('x', 'a'.repeat(v.MAX_HTML_BYTES + 1)).ok, false);
+  });
+});
+
+describe('isHtmlPath', () => {
+  test('only .html paths', () => {
+    assert.equal(v.isHtmlPath('C:\\a\\b.html'), true);
+    assert.equal(v.isHtmlPath('/a/b.HTML'), true);
+    assert.equal(v.isHtmlPath('/a/b.htm'), false);
+    assert.equal(v.isHtmlPath('/a/b.html.exe'), false);
+    assert.equal(v.isHtmlPath('/a/.html'), false);
+    assert.equal(v.isHtmlPath(undefined), false);
+  });
+});

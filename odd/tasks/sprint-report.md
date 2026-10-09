@@ -54,7 +54,9 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       hygiene notes, outside-epics section (test-first).
 - [x] 4b. Blocked statuses: `jira.blockedStatusIds` in the config (normalize, validate, does not move cache keys) and
       a picker in Conexión -> Particularidades.
-- [ ] 5. HTML template with the Flock design tokens, date-range picker, preview, `saveHtml` bridge (validated in main).
+- [x] 5a. Pure HTML renderer (`renderSprintCloseHtml`, Flock tokens, escaped, no scripts) + `saveHtml` bridge
+      (validated in main, `.html` only).
+- [ ] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
 - [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
 - [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
       plan §8.2.
@@ -114,3 +116,10 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   Particularidades (saves on toggle, unsaved status-mapping edits survive via the task 2 fix). RED observed for node
   (Karma spec written with the code, no RED). node 519/519, Karma 178/178, `build:desktop` OK.
   Commit: `feat(config): configure blocked statuses for the sprint report`.
+- Task 5a (worker): `shared/domain/sprint-close-html.mjs` `renderSprintCloseHtml(report, { title, teamName,
+  generatedAt, timeZone, jiraBaseUrl })`: standalone document, inline CSS with Flock tokens, `@media print`, no
+  `<script>`, everything escaped, issue links only with an https origin (`/browse/<KEY>`). `saveHtml` bridge mirrors
+  `saveMarkdown` (5 MB, `.html` filter, main rejects any other extension with `INVALID_PATH`). The reference report
+  was not read; no real data in the repo. RED observed for the renderer (bridge tests written after the code).
+  node 547/547, Karma 178/178, `build:desktop` OK.
+  Commit: `feat(reports): render the sprint close as standalone HTML`.

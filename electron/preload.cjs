@@ -20,4 +20,6 @@ contextBridge.exposeInMainWorld('leadershipPanel', {
   copyText: (text) => ipcRenderer.invoke('bridge:copyText', text),
   saveMarkdown: (suggestedName, content) =>
     ipcRenderer.invoke('bridge:saveMarkdown', suggestedName, content),
+  saveHtml: (suggestedName, content) =>
+    ipcRenderer.invoke('bridge:saveHtml', suggestedName, content),
 });

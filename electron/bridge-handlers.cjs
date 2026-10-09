@@ -1,7 +1,9 @@
 const {
   buildIssueUrl,
+  isHtmlPath,
   isMarkdownPath,
   validateCopyText,
+  validateHtmlRequest,
   validateIssueKey,
   validateMarkdownRequest,
 } = require('./bridge-validation.cjs');
@@ -47,6 +49,20 @@ function createBridgeHandlers({ shell, clipboard, dialog, fs, getJiraBaseUrl, ge
       if (result.canceled || !result.filePath) return { ok: true, canceled: true };
       // The user picks the folder, but only .md files are ever written.
       if (!isMarkdownPath(result.filePath)) return { ok: false, error: 'INVALID_PATH' };
+      fs.writeFileSync(result.filePath, valid.value.content);
+      return { ok: true };
+    },
+
+    async saveHtml(suggestedName, content) {
+      const valid = validateHtmlRequest(suggestedName, content);
+      if (!valid.ok) return valid;
+      const result = await dialog.showSaveDialog(getWindow(), {
+        defaultPath: valid.value.fileName,
+        filters: [{ name: 'HTML', extensions: ['html'] }],
+      });
+      if (result.canceled || !result.filePath) return { ok: true, canceled: true };
+      // The user picks the folder, but only .html files are ever written.
+      if (!isHtmlPath(result.filePath)) return { ok: false, error: 'INVALID_PATH' };
       fs.writeFileSync(result.filePath, valid.value.content);
       return { ok: true };
     },

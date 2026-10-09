@@ -30,7 +30,7 @@ function loadPreload(argv) {
   return { exposed, invoked };
 }
 
-test('the preload exposes exactly the five bridge keys under leadershipPanel', () => {
+test('the preload exposes exactly the six bridge keys under leadershipPanel', () => {
   const { exposed } = loadPreload(['--proxy-port=3101', '--proxy-secret=s3cret']);
   assert.deepEqual(Object.keys(exposed), ['leadershipPanel']);
   assert.deepEqual(Object.keys(exposed.leadershipPanel).sort(), [
@@ -38,6 +38,7 @@ test('the preload exposes exactly the five bridge keys under leadershipPanel', (
     'openInJira',
     'proxyBaseUrl',
     'proxySecret',
+    'saveHtml',
     'saveMarkdown',
   ]);
   assert.equal(exposed.leadershipPanel.proxyBaseUrl, 'http://127.0.0.1:3101');
@@ -49,8 +50,9 @@ test('bridge functions only forward to their own IPC channel', async () => {
   await exposed.leadershipPanel.openInJira('A-1');
   await exposed.leadershipPanel.copyText('t');
   await exposed.leadershipPanel.saveMarkdown('n.md', 'c');
+  await exposed.leadershipPanel.saveHtml('n.html', 'c');
   assert.deepEqual(
     invoked.map(([channel]) => channel),
-    ['bridge:openInJira', 'bridge:copyText', 'bridge:saveMarkdown'],
+    ['bridge:openInJira', 'bridge:copyText', 'bridge:saveMarkdown', 'bridge:saveHtml'],
   );
 });
