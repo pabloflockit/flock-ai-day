@@ -21,6 +21,13 @@ export function buildDemoConfig() {
       email: DEMO_EMAIL,
       epicLinkMode: 'auto',
       epicLinkFieldId: EPIC_LINK_FIELD_ID,
+      // Layers from the fictional components (report "Cierre de sprint"); status 5 = Blocked.
+      componentLayers: [
+        { projectKey: 'DEMO', componentId: '20001', componentName: 'FRONTEND', layer: 'frontend' },
+        { projectKey: 'DEMO', componentId: '20002', componentName: 'BACKEND', layer: 'backend' },
+        { projectKey: 'DEMO', componentId: '20005', componentName: 'QA', layer: 'functional' },
+      ],
+      blockedStatusIds: ['5'],
     },
     teams: [
       {

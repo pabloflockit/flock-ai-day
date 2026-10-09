@@ -57,7 +57,8 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 - [x] 5a. Pure HTML renderer (`renderSprintCloseHtml`, Flock tokens, escaped, no scripts) + `saveHtml` bridge
       (validated in main, `.html` only).
 - [x] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
-- [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
+- [x] 6a. Demo coverage: components mapped to layers, blocked statuses, hygiene cases (parallel with task 7).
+- [ ] 6b. Close: merge task 7, docs, README, decisions, final demo smoke.
 - [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
       plan §8.2.
 
@@ -136,3 +137,12 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   asks to refresh when legacy rows are present. RED observed (domain TypeError; store compile error). node
   548/548, Karma 194/194, `build:desktop` OK. Not smoked: saving the exported file, switching teams.
   Commit: `feat(reports): add the sprint close page`.
+- Tasks 6a and 7 ran in PARALLEL (user approval): task 7 in the linked worktree `../flock-ai-day-ai` (branch
+  `feat/sprint-close-ai`), task 6a on main; disjoint edit surfaces, docs deferred to 6b.
+- Task 6a (worker): demo config maps 20001 FRONTEND -> frontend, 20002 BACKEND -> backend, new 20005 QA ->
+  functional; `blockedStatusIds: ['5']`. Existing rows adjusted (no new rows): DEMO-4/13 (open subtask under a done
+  parent), DEMO-6/11/12 (open parent with all subtasks done), DEMO-15/19/20 (counted backend primary + ref. in
+  frontend), DEMO-18 (two layers), DEMO-7/17 (functional), DEMO-10 (blocked with movement). New
+  `test/demo-sprint-close.test.mjs` runs the real client over the demo fetch -> `buildSprintClose` ->
+  `renderSprintCloseHtml`. RED observed (no layers). node 550/550.
+  Commit: `test(demo): cover every sprint close feature in the demo`.
