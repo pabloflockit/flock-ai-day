@@ -151,3 +151,39 @@ test('setEpicActive and removeEpic', () => {
   assert.deepEqual(ok(edit.removeEpic(base(), 'p1', 'ABC-1')).projects[0].epics, []);
   assert.deepEqual(codes(edit.removeEpic(base(), 'p2', 'ABC-1')), ['EPIC_NOT_FOUND']);
 });
+
+// ---- Jira connection (plan §6.1.1) ------------------------------------------------------------
+
+test('setJiraConnection stores the trimmed URL and email and requires the email', () => {
+  const config = ok(edit.setJiraConnection(base(), { baseUrl: 'https://acme.atlassian.net', email: '  a@b.c ' }));
+  assert.equal(config.jira.baseUrl, 'https://acme.atlassian.net');
+  assert.equal(config.jira.email, 'a@b.c');
+  assert.deepEqual(codes(edit.setJiraConnection(base(), { baseUrl: 'https://acme.atlassian.net', email: ' ' })), [
+    'JIRA_EMAIL_REQUIRED',
+  ]);
+});
+
+test('setJiraParticularities sets link mode, field and overrides; epic_link needs the field', () => {
+  const config = ok(
+    edit.setJiraParticularities(base(), {
+      epicLinkMode: 'epic_link',
+      epicLinkFieldId: 'customfield_10014',
+      statusCategoryOverrides: { '3': 'doing', '': 'done', '4': 'bogus' },
+    }),
+  );
+  assert.equal(config.jira.epicLinkMode, 'epic_link');
+  assert.equal(config.jira.epicLinkFieldId, 'customfield_10014');
+  assert.deepEqual(config.jira.statusCategoryOverrides, { '3': 'doing' });
+
+  const parent = ok(edit.setJiraParticularities(config, { epicLinkMode: 'parent', epicLinkFieldId: 'x', statusCategoryOverrides: {} }));
+  assert.equal(parent.jira.epicLinkFieldId, null, 'parent mode never keeps a field');
+
+  assert.deepEqual(
+    codes(edit.setJiraParticularities(base(), { epicLinkMode: 'epic_link', epicLinkFieldId: ' ', statusCategoryOverrides: {} })),
+    ['EPIC_LINK_FIELD_REQUIRED'],
+  );
+  assert.deepEqual(
+    codes(edit.setJiraParticularities(base(), { epicLinkMode: 'other', epicLinkFieldId: null, statusCategoryOverrides: {} })),
+    ['EPIC_LINK_MODE_INVALID'],
+  );
+});

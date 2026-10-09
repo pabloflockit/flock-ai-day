@@ -31,6 +31,15 @@ export function registerConnectionRoutes(router) {
     return { deploymentType: info.deploymentType, baseUrl: url.origin };
   });
 
+  // Presence only (for the first-run wizard and the "replace token" screen): never the value.
+  router.add('GET', '/api/connection/status', ({ deps }) => {
+    if (!deps.secrets) {
+      throw new ApiError(503, ERROR_CODES.SECRETS_UNAVAILABLE, 'Secret storage is not available.');
+    }
+    const token = deps.secrets.getJiraToken();
+    return { tokenStored: typeof token === 'string' && token !== '' };
+  });
+
   router.add('POST', '/api/connection/test', async ({ deps }) => {
     const me = await requireJira(deps).myself();
     return { accountId: me.accountId, displayName: me.displayName };

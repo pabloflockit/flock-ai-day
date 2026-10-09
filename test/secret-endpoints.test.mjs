@@ -112,3 +112,15 @@ test('a failing store never leaks the value in the response', async () => {
     await leaky.close();
   }
 });
+
+test('GET /api/connection/status reports only whether a Jira token is stored', async () => {
+  delete stored.jira;
+  const before = await fetch(`${proxy.base}/api/connection/status`, { headers: withSecret() });
+  assert.deepEqual(await before.json(), { ok: true, data: { tokenStored: false } });
+
+  await put('/api/connection/token', { token: TOKEN });
+  const after = await fetch(`${proxy.base}/api/connection/status`, { headers: withSecret() });
+  const text = await after.text();
+  assert.deepEqual(JSON.parse(text), { ok: true, data: { tokenStored: true } });
+  assert.ok(!text.includes(TOKEN));
+});

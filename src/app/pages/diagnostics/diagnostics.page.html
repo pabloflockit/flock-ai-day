@@ -51,85 +51,27 @@
       {{ configState().error?.code }})
     </p>
   }
-
+  <dl class="summary">
+    <dt>URL</dt>
+    <dd class="text-mono">{{ config()?.jira?.baseUrl || 'Sin configurar' }}</dd>
+    <dt>Email</dt>
+    <dd>{{ config()?.jira?.email || 'Sin configurar' }}</dd>
+    <dt>Token</dt>
+    <dd>{{ tokenStored() ? 'Guardado' : tokenStored() === false ? 'Sin guardar' : 'Desconocido' }}</dd>
+  </dl>
   <div class="field">
-    <label for="jira-url">URL de Jira</label>
-    <input
-      id="jira-url"
-      type="url"
-      autocomplete="off"
-      placeholder="https://tu-sitio.atlassian.net"
-      [value]="baseUrl()"
-      (input)="baseUrl.set($any($event.target).value)"
-    />
-    <button type="button" [disabled]="verify().status === 'loading'" (click)="verifyUrl()">
-      Verificar
-    </button>
-  </div>
-  @if (verify().status === 'ok') {
-    <p>Sitio verificado: Jira {{ verify().data?.deploymentType }}.</p>
-  }
-  @if (verify().error; as e) {
-    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
-  }
-
-  <div class="field">
-    <label for="jira-email">Email</label>
-    <input
-      id="jira-email"
-      type="email"
-      autocomplete="off"
-      [value]="email()"
-      (input)="email.set($any($event.target).value)"
-    />
     <button
       type="button"
-      [disabled]="!canSaveConnection() || saveConnection().status === 'loading'"
-      (click)="saveJiraConnection()"
+      [disabled]="!jiraReady() || testConnection().status === 'loading'"
+      (click)="testJiraConnection()"
     >
-      Guardar conexión
-    </button>
-  </div>
-  @if (!canSaveConnection()) {
-    <p class="hint">Verificá la URL para poder guardar la conexión.</p>
-  }
-  @if (saveConnection().status === 'ok') {
-    <p>Conexión guardada.</p>
-  }
-  @if (saveConnection().error; as e) {
-    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
-  }
-
-  <div class="field">
-    <label for="jira-token">Token de API</label>
-    <input
-      id="jira-token"
-      type="password"
-      autocomplete="off"
-      [value]="token()"
-      (input)="token.set($any($event.target).value)"
-    />
-    <button
-      type="button"
-      [disabled]="!token().trim() || saveToken().status === 'loading'"
-      (click)="saveJiraToken()"
-    >
-      Guardar token
-    </button>
-  </div>
-  <p class="hint">El token se guarda cifrado y no se puede volver a ver.</p>
-  @if (saveToken().status === 'ok') {
-    <p>Token guardado.</p>
-  }
-  @if (saveToken().error; as e) {
-    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
-  }
-
-  <div class="field">
-    <button type="button" [disabled]="testConnection().status === 'loading'" (click)="testJiraConnection()">
       Probar conexión
     </button>
+    <a routerLink="/connection">Configurar conexión</a>
   </div>
+  @if (!jiraReady()) {
+    <p class="hint">Guardá URL, email y token en Conexión para poder probarla.</p>
+  }
   @if (testConnection().status === 'ok') {
     <p>Conectado como {{ testConnection().data?.displayName }}.</p>
   }
@@ -150,7 +92,11 @@
       [value]="epicKey()"
       (input)="epicKey.set($any($event.target).value)"
     />
-    <button type="button" [disabled]="epicCheck().status === 'loading'" (click)="validateEpic()">
+    <button
+      type="button"
+      [disabled]="!jiraReady() || epicCheck().status === 'loading'"
+      (click)="validateEpic()"
+    >
       Validar
     </button>
   </div>

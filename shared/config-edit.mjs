@@ -305,3 +305,54 @@ export function removeEpic(config, projectId, key) {
     project.epics = project.epics.filter((e) => e !== epic);
   });
 }
+
+// ---- Jira connection (plan §6.1.1) ------------------------------------------------------------
+
+const EPIC_LINK_MODES = ['parent', 'epic_link', 'auto'];
+const CATEGORIES = ['todo', 'doing', 'done'];
+
+/**
+ * Site and account. The proxy still requires a changed `baseUrl` to be verified as Cloud.
+ * @param {AppConfig} config @param {{ baseUrl: string, email: string }} connection
+ */
+export function setJiraConnection(config, connection) {
+  const email = connection.email.trim();
+  if (email === '') return fail('JIRA_EMAIL_REQUIRED', 'jira.email', 'Ingresá el email de la cuenta de Jira.');
+  return apply(config, (draft) => {
+    draft.jira.baseUrl = connection.baseUrl.trim();
+    draft.jira.email = email;
+  });
+}
+
+/**
+ * Site particularities: how epics link to their children and the status category overrides
+ * (status id -> category; anything else is dropped).
+ * @param {AppConfig} config
+ * @param {{ epicLinkMode: string, epicLinkFieldId: string | null, statusCategoryOverrides: Record<string, string> }} p
+ */
+export function setJiraParticularities(config, p) {
+  if (!EPIC_LINK_MODES.includes(p.epicLinkMode)) {
+    return fail('EPIC_LINK_MODE_INVALID', 'jira.epicLinkMode', 'El método de vínculo de épicas no es válido.');
+  }
+  const mode = /** @type {AppConfig['jira']['epicLinkMode']} */ (p.epicLinkMode);
+  const fieldId = mode === 'parent' ? null : textOrNull(p.epicLinkFieldId);
+  if (mode === 'epic_link' && fieldId === null) {
+    return fail(
+      'EPIC_LINK_FIELD_REQUIRED',
+      'jira.epicLinkFieldId',
+      'El método de vínculo "Epic Link" necesita el campo de Jira que lo guarda.',
+    );
+  }
+  /** @type {AppConfig['jira']['statusCategoryOverrides']} */
+  const overrides = {};
+  for (const [statusId, category] of Object.entries(p.statusCategoryOverrides)) {
+    if (statusId.trim() !== '' && CATEGORIES.includes(category)) {
+      overrides[statusId.trim()] = /** @type {'todo' | 'doing' | 'done'} */ (category);
+    }
+  }
+  return apply(config, (draft) => {
+    draft.jira.epicLinkMode = mode;
+    draft.jira.epicLinkFieldId = fieldId;
+    draft.jira.statusCategoryOverrides = overrides;
+  });
+}

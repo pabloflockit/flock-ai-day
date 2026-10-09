@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ProxyClient, ProxyError } from '../../core/proxy-client';
 import { DiagnosticsPage } from './diagnostics.page';
 
@@ -36,11 +37,12 @@ const dataset = {
 describe('DiagnosticsPage', () => {
   const flush = () => new Promise<void>((resolve) => setTimeout(resolve));
 
-  function setup(configGet?: () => Promise<unknown>) {
+  function setup(configGet?: () => Promise<unknown>, tokenStored = true) {
     const proxy = {
       health: () => Promise.resolve({ status: 'ok', version: '1.0.0' }),
       get: jasmine.createSpy('get').and.callFake((path: string) => {
         if (path === '/api/config') return configGet ? configGet() : Promise.resolve(config);
+        if (path === '/api/connection/status') return Promise.resolve({ tokenStored });
         if (path.startsWith('/api/jira/epics/')) {
           return Promise.resolve({ key: 'X-9', summary: 'Épica de prueba' });
         }
@@ -50,7 +52,11 @@ describe('DiagnosticsPage', () => {
       put: jasmine.createSpy('put').and.callFake(() => Promise.resolve({ stored: true })),
     };
     TestBed.configureTestingModule({
-      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: proxy }],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        { provide: ProxyClient, useValue: proxy },
+      ],
     });
     const fixture = TestBed.createComponent(DiagnosticsPage);
     return { fixture, proxy, page: fixture.componentInstance, el: fixture.nativeElement as HTMLElement };
@@ -112,17 +118,14 @@ describe('DiagnosticsPage', () => {
     expect(withBridge.el.textContent).toContain('Abrir en Jira');
   });
 
-  it('clears the token input after saving and never renders it', async () => {
-    const { fixture, page, proxy, el } = setup();
+  it('shows the connection read-only and never renders a token field', async () => {
+    const { fixture, el } = setup();
     await flush();
-    page.token.set('super-secret-token');
-    await page.saveJiraToken();
     fixture.detectChanges();
-
-    expect(proxy.put).toHaveBeenCalledWith('/api/connection/token', { token: 'super-secret-token' });
-    expect(page.token()).toBe('');
-    expect((el.querySelector('#jira-token') as HTMLInputElement).value).toBe('');
-    expect(el.innerHTML).not.toContain('super-secret-token');
+    expect(el.querySelector('#jira-token')).toBeNull();
+    expect(el.textContent).toContain('https://acme.atlassian.net');
+    expect(el.textContent).toContain('Guardado');
+    expect(el.querySelector('a[href="/connection"]')).not.toBeNull();
   });
 
   describe('data key recovery', () => {
@@ -177,16 +180,23 @@ describe('DiagnosticsPage', () => {
     });
   });
 
-  it('only allows saving the connection after the URL was verified', async () => {
-    const { page, proxy } = setup();
+  it('only tests the connection or validates an epic once URL, email and token are saved', async () => {
+    const button = (el: HTMLElement, label: string) =>
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.includes(label))!;
+
+    const missing = setup(undefined, false);
     await flush();
-    expect(page.canSaveConnection()).toBeFalse();
+    missing.fixture.detectChanges();
+    expect(missing.page.jiraReady()).toBeFalse();
+    expect(button(missing.el, 'Probar conexión').disabled).toBeTrue();
+    expect(button(missing.el, 'Validar').disabled).toBeTrue();
+    expect(missing.el.textContent).toContain('Guardá URL, email y token');
 
-    proxy.post.and.resolveTo({ deploymentType: 'Cloud', baseUrl: 'https://acme.atlassian.net' });
-    await page.verifyUrl();
-    expect(page.canSaveConnection()).toBeTrue();
-
-    page.baseUrl.set('https://other.atlassian.net');
-    expect(page.canSaveConnection()).toBeFalse();
+    TestBed.resetTestingModule();
+    const ready = setup();
+    await flush();
+    ready.fixture.detectChanges();
+    expect(button(ready.el, 'Probar conexión').disabled).toBeFalse();
+    expect(button(ready.el, 'Validar').disabled).toBeFalse();
   });
 });

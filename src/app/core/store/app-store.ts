@@ -50,9 +50,15 @@ export interface ViewState {
   scopeId: string | null;
 }
 
+/** Presence of the Jira token (`GET /api/connection/status`); `null` until known. */
+export interface ConnectionState {
+  tokenStored: boolean | null;
+}
+
 export interface AppState {
   proxyHealth: ProxyHealthState;
   config: ConfigState;
+  connection: ConnectionState;
   datasets: Record<string, DatasetState>;
   sync: SyncState;
   view: ViewState;
@@ -63,6 +69,7 @@ type DatasetView = Pick<DatasetState, 'rows' | 'fetchedAt' | 'isCurrent' | 'shar
 const initialState: AppState = {
   proxyHealth: { status: 'unknown', version: null, errorMessage: null },
   config: { status: 'idle', config: null, error: null },
+  connection: { tokenStored: null },
   datasets: {},
   sync: { status: 'idle' },
   view: { scopeId: null },
@@ -100,6 +107,12 @@ export class AppStore {
   /** The current normalized configuration, or `null` until `GET /api/config` answered. */
   readonly config = computed(() => this.#state().config.config);
   readonly datasets = computed(() => this.#state().datasets);
+  readonly tokenStored = computed(() => this.#state().connection.tokenStored);
+  /** URL, email and token are saved: Jira calls can be made (or tested). */
+  readonly jiraReady = computed(() => {
+    const jira = this.config()?.jira;
+    return Boolean(jira?.baseUrl && jira.email && this.tokenStored());
+  });
   readonly sync = computed(() => this.#state().sync);
   readonly view = computed(() => this.#state().view);
 
@@ -134,6 +147,22 @@ export class AppStore {
     } catch (error) {
       this.#setConfig({ status: 'error', config: null, error: toStoreError(error) });
     }
+  }
+
+  /** Reads whether a Jira token is stored. On failure the presence stays unknown (`null`). */
+  async loadConnectionStatus(): Promise<void> {
+    try {
+      const { tokenStored } = await this.#proxy.get<{ tokenStored: boolean }>('/api/connection/status');
+      this.#state.update((s) => ({ ...s, connection: { tokenStored } }));
+    } catch {
+      this.#state.update((s) => ({ ...s, connection: { tokenStored: null } }));
+    }
+  }
+
+  /** `PUT /api/connection/token` (write-only); the value is never kept in the renderer. */
+  async saveJiraToken(token: string): Promise<void> {
+    await this.#proxy.put('/api/connection/token', { token });
+    this.#state.update((s) => ({ ...s, connection: { tokenStored: true } }));
   }
 
   /**

@@ -1,0 +1,242 @@
+<header class="page-header">
+  <div>
+    <h1>Conexión con Jira</h1>
+    @if (mode() === 'wizard') {
+      <p class="field-hint">Primera configuración: tres pasos.</p>
+    }
+  </div>
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+}
+
+<!-- Blocks shared by the wizard steps and the editable screen. -->
+<ng-template #siteBlock>
+  <div class="field">
+    <label for="jira-url">URL de Jira</label>
+    <div class="field-row">
+      <input
+        id="jira-url"
+        type="url"
+        autocomplete="off"
+        placeholder="https://tu-sitio.atlassian.net"
+        [value]="baseUrl()"
+        (input)="baseUrl.set($any($event.target).value)"
+      />
+      <button
+        type="button"
+        class="btn-ghost"
+        [disabled]="!baseUrl().trim() || verify().status === 'loading'"
+        (click)="verifyUrl()"
+      >
+        Verificar
+      </button>
+    </div>
+    @if (siteVerified()) {
+      <span class="field-hint"><span class="status-chip state-done">Verificado</span> Jira {{ verify().data?.deploymentType }}</span>
+    } @else if (siteAccepted()) {
+      <span class="field-hint">Sitio guardado.</span>
+    } @else {
+      <span class="field-hint">Solo se admite Jira Cloud. Verificá la URL para continuar.</span>
+    }
+    @if (verify().error; as e) {
+      <span class="field-error" role="alert">{{ e.message }} (código: {{ e.code }})</span>
+    }
+  </div>
+</ng-template>
+
+<ng-template #credentialsBlock>
+  <div class="field">
+    <label for="jira-email">Email</label>
+    <input
+      id="jira-email"
+      type="email"
+      autocomplete="off"
+      [value]="email()"
+      (input)="email.set($any($event.target).value)"
+    />
+  </div>
+  <div class="field">
+    <label for="jira-token">Token de API</label>
+    <input
+      id="jira-token"
+      type="password"
+      autocomplete="off"
+      [placeholder]="tokenStored() ? 'Dejalo vacío para conservar el actual' : ''"
+      [value]="token()"
+      (input)="token.set($any($event.target).value)"
+    />
+    @if (tokenStored()) {
+      <span class="field-hint">Hay un token guardado. Escribí uno nuevo solo para reemplazarlo.</span>
+    } @else {
+      <span class="field-hint">Se guarda cifrado y no se puede volver a ver.</span>
+    }
+  </div>
+  <div class="actions">
+    <button type="button" [disabled]="!canTest()" (click)="saveAndTest()">
+      {{ mode() === 'wizard' ? 'Probar' : 'Guardar y probar' }}
+    </button>
+    @if (test().status === 'loading') {
+      <span class="field-hint">Probando…</span>
+    }
+    @if (test().status === 'ok') {
+      <span class="field-hint">
+        <span class="status-chip state-done">Conectado</span> Conectado como {{ test().data?.displayName }}.
+      </span>
+    }
+  </div>
+  @if (test().error; as e) {
+    <p class="field-error" role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+</ng-template>
+
+<ng-template #particularitiesBlock>
+  <div class="field">
+    <label for="epic-link-mode">Vínculo de épicas</label>
+    <select
+      id="epic-link-mode"
+      [value]="epicLinkMode()"
+      (change)="epicLinkMode.set($any($event.target).value)"
+    >
+      @for (m of linkModes; track m.value) {
+        <option [value]="m.value" [selected]="m.value === epicLinkMode()">{{ m.label }}</option>
+      }
+    </select>
+    <span class="field-hint">{{ linkHint() }}</span>
+  </div>
+  @if (epicLinkMode() !== 'parent') {
+    <div class="field">
+      <label for="epic-link-field">Campo Epic Link</label>
+      <select
+        id="epic-link-field"
+        [value]="epicLinkFieldId()"
+        (change)="epicLinkFieldId.set($any($event.target).value)"
+      >
+        <option value="" [selected]="epicLinkFieldId() === ''">
+          {{ epicLinkMode() === 'auto' ? 'Ninguno' : 'Elegí un campo' }}
+        </option>
+        @for (f of customFields(); track f.id) {
+          <option [value]="f.id" [selected]="f.id === epicLinkFieldId()">{{ f.name }} ({{ f.id }})</option>
+        }
+      </select>
+      @if (fieldsOp().error; as e) {
+        <span class="field-error" role="alert">No se pudieron leer los campos: {{ e.message }}</span>
+      }
+    </div>
+  }
+
+  <h3>Mapeo de estados</h3>
+  <p class="field-hint">
+    Cada estado usa la categoría que le da Jira. Cambiala solo si en tu sitio no refleja el trabajo real.
+  </p>
+  @if (statusesOp().status === 'loading') {
+    <p class="field-hint">Cargando estados…</p>
+  }
+  @if (statusesOp().error; as e) {
+    <p class="field-error" role="alert">No se pudieron leer los estados: {{ e.message }} (código: {{ e.code }})</p>
+  }
+  @if (statuses().length > 0) {
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Estado</th>
+            <th>Categoría en Jira</th>
+            <th>Usar como</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of statuses(); track s.id) {
+            <tr>
+              <td>{{ s.name }}</td>
+              <td>
+                @if (s.statusCategory; as c) {
+                  <span class="status-chip {{ categoryState[c] }}">{{ categoryLabel[c] }}</span>
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                <select
+                  [attr.aria-label]="'Categoría para ' + s.name"
+                  (change)="setOverride(s.id, $any($event.target).value)"
+                >
+                  <option value="" [selected]="!overrides()[s.id]">Igual que Jira</option>
+                  @for (c of categories; track c) {
+                    <option [value]="c" [selected]="overrides()[s.id] === c">{{ categoryLabel[c] }}</option>
+                  }
+                </select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</ng-template>
+
+@switch (mode()) {
+  @case ('loading') {
+    <p class="field-hint">Cargando…</p>
+  }
+
+  @case ('wizard') {
+    <nav class="tabs" aria-label="Pasos">
+      @for (s of steps; track s.n) {
+        <span class="tab" [class.active]="s.n === step()" [attr.aria-current]="s.n === step() ? 'step' : null">
+          @if (s.n < step()) {
+            <app-icon name="check" />
+          }
+          {{ s.n }}. {{ s.label }}
+        </span>
+      }
+    </nav>
+
+    <section class="card">
+      @switch (step()) {
+        @case (1) {
+          <ng-container [ngTemplateOutlet]="siteBlock" />
+        }
+        @case (2) {
+          <ng-container [ngTemplateOutlet]="credentialsBlock" />
+        }
+        @case (3) {
+          <ng-container [ngTemplateOutlet]="particularitiesBlock" />
+        }
+      }
+
+      <div class="wizard-foot">
+        @if (step() > 1) {
+          <button type="button" class="btn-ghost" (click)="back()">Atrás</button>
+        }
+        <span class="spacer"></span>
+        @if (step() < 3) {
+          <button type="button" [disabled]="!canAdvance()" (click)="next()">Siguiente</button>
+        } @else {
+          <button type="button" [disabled]="saving()" (click)="finish()">Finalizar</button>
+        }
+      </div>
+    </section>
+  }
+
+  @case ('edit') {
+    <section class="card">
+      <h2>Sitio y credenciales</h2>
+      <ng-container [ngTemplateOutlet]="siteBlock" />
+      <ng-container [ngTemplateOutlet]="credentialsBlock" />
+    </section>
+
+    <section class="card">
+      <h2>Particularidades</h2>
+      <ng-container [ngTemplateOutlet]="particularitiesBlock" />
+      <div class="wizard-foot">
+        <span class="spacer"></span>
+        <button type="button" [disabled]="saving()" (click)="saveParticularities()">Guardar</button>
+      </div>
+    </section>
+  }
+}

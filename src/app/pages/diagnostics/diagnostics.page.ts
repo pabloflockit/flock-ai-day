@@ -4,58 +4,31 @@ import {
   computed,
   effect,
   inject,
-  linkedSignal,
   signal,
   untracked,
-  type WritableSignal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { epicIssuesParams } from '../../../../shared/cache-key.mjs';
 import { effectiveCategory } from '../../../../shared/domain/status.mjs';
 import { errorMessageEs } from '../../core/error-messages';
-import { ProxyClient, ProxyError, TRANSPORT_ERROR } from '../../core/proxy-client';
+import { idle, track, type Op } from '../../core/op';
+import { ProxyClient, TRANSPORT_ERROR } from '../../core/proxy-client';
 import { AppStore, EMPTY_DATASET, type StoreError } from '../../core/store/app-store';
 import { CalendarDatePipe } from '../../shared/pipes/calendar-date.pipe';
 import { InstantPipe } from '../../shared/pipes/instant.pipe';
 import { CATEGORY_STATE } from '../../shared/ui/state';
 
-/** State of one user-triggered call. */
-interface Op<T> {
-  status: 'idle' | 'loading' | 'ok' | 'error';
-  data: T | null;
-  error: StoreError | null;
-}
-
-const idle = <T>(): Op<T> => ({ status: 'idle', data: null, error: null });
-
 const DATA_KEY_INVALID = 'DATA_KEY_INVALID';
 const CATEGORY_LABEL = { todo: 'Por hacer', doing: 'En curso', done: 'Hecho' } as const;
 
-/** Runs `call`, publishing its progress in `target`. Never throws. */
-async function track<T>(target: WritableSignal<Op<T>>, call: () => Promise<T>): Promise<boolean> {
-  target.set({ status: 'loading', data: null, error: null });
-  try {
-    target.set({ status: 'ok', data: await call(), error: null });
-    return true;
-  } catch (error) {
-    const code = error instanceof ProxyError ? error.code : 'UNKNOWN';
-    const message = error instanceof ProxyError ? error.message : errorMessageEs(code);
-    target.set({
-      status: 'error',
-      data: null,
-      error: { code, message: code === TRANSPORT_ERROR ? errorMessageEs(code) : message },
-    });
-    return false;
-  }
-}
-
 /**
- * Diagnostics: proxy health, Jira connection and the rows of a test epic. All Jira text is
+ * Diagnostics: proxy health, a Jira connection test and the rows of a test epic. All Jira text is
  * rendered through Angular interpolation (escaped); there are no raw-HTML bindings or sanitizer bypasses.
  */
 @Component({
   selector: 'app-diagnostics-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [InstantPipe, CalendarDatePipe],
+  imports: [InstantPipe, CalendarDatePipe, RouterLink],
   templateUrl: './diagnostics.page.html',
   styleUrl: './diagnostics.page.scss',
 })
@@ -67,21 +40,11 @@ export class DiagnosticsPage {
   readonly config = this.#store.config;
   readonly configState = this.#store.configState;
 
-  // Connection block.
-  readonly baseUrl = linkedSignal(() => this.config()?.jira.baseUrl ?? '');
-  readonly email = linkedSignal(() => this.config()?.jira.email ?? '');
-  /** Write-only: cleared after saving and never rendered anywhere. */
-  readonly token = signal('');
-  readonly verify = signal<Op<{ deploymentType: string; baseUrl: string }>>(idle());
-  readonly saveConnection = signal<Op<true>>(idle());
-  readonly saveToken = signal<Op<true>>(idle());
+  // Connection block: read-only here; it is edited on the connection screen.
+  readonly tokenStored = this.#store.tokenStored;
+  /** URL, email and token are saved; before that, Jira calls would only answer "not configured". */
+  readonly jiraReady = this.#store.jiraReady;
   readonly testConnection = signal<Op<{ displayName: string }>>(idle());
-  readonly canSaveConnection = computed(
-    () =>
-      this.config() !== null &&
-      this.verify().status === 'ok' &&
-      this.verify().data?.baseUrl === this.baseUrl().trim(),
-  );
 
   // Data-key recovery (architecture 4.5).
   readonly reset = signal<Op<{ backupFile: string | null }>>(idle());
@@ -90,9 +53,6 @@ export class DiagnosticsPage {
   readonly dataKeyInvalid = computed(() => {
     const errors = [
       this.configState().error,
-      this.verify().error,
-      this.saveConnection().error,
-      this.saveToken().error,
       this.testConnection().error,
       this.epicCheck().error,
       this.datasetError(),
@@ -111,7 +71,7 @@ export class DiagnosticsPage {
   readonly activeEpicKey = signal<string | null>(null);
   readonly canFetchRows = computed(
     () =>
-      this.config() !== null &&
+      this.jiraReady() &&
       this.epicCheck().status === 'ok' &&
       this.epicCheck().data?.key === this.epicKey().trim(),
   );
@@ -167,6 +127,7 @@ export class DiagnosticsPage {
   constructor() {
     void this.#store.checkProxyHealth();
     void this.#store.loadConfig();
+    void this.#store.loadConnectionStatus();
 
     // The active epic is the scope: hydration must follow it (and the config that is part of the
     // key), so it lives in an effect and not in ngOnInit.
@@ -182,40 +143,6 @@ export class DiagnosticsPage {
 
   recheck(): void {
     void this.#store.checkProxyHealth();
-  }
-
-  async verifyUrl(): Promise<void> {
-    const ok = await track(this.verify, () =>
-      this.#proxy.post<{ deploymentType: string; baseUrl: string }>('/api/connection/verify', {
-        baseUrl: this.baseUrl().trim(),
-      }),
-    );
-    // The input shows the normalized origin the proxy verified, so "verified" is exactly what is saved.
-    const verified = this.verify().data;
-    if (ok && verified) this.baseUrl.set(verified.baseUrl);
-  }
-
-  async saveJiraConnection(): Promise<void> {
-    const config = this.config();
-    const verified = this.verify().data;
-    if (!config || !verified || !this.canSaveConnection()) return;
-    await track(this.saveConnection, async () => {
-      await this.#store.saveConfig({
-        ...config,
-        jira: { ...config.jira, baseUrl: verified.baseUrl, email: this.email().trim() },
-      });
-      return true as const;
-    });
-  }
-
-  async saveJiraToken(): Promise<void> {
-    const value = this.token();
-    if (!value.trim()) return;
-    const saved = await track(this.saveToken, async () => {
-      await this.#proxy.put('/api/connection/token', { token: value });
-      return true as const;
-    });
-    if (saved) this.token.set('');
   }
 
   async testJiraConnection(): Promise<void> {
@@ -256,7 +183,7 @@ export class DiagnosticsPage {
     if (!accepted) return;
     const ok = await track(this.reset, () => this.#store.resetStorage());
     if (ok) {
-      for (const op of [this.verify, this.saveConnection, this.saveToken, this.testConnection, this.epicCheck]) {
+      for (const op of [this.testConnection, this.epicCheck]) {
         op.set(idle());
       }
       this.activeEpicKey.set(null);
