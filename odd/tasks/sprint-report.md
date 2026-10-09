@@ -1,6 +1,6 @@
 # Feature: sprint-report (layered sprint close report)
 
-Status: PLANNED — starts after flow 2 phase E closes (user decision).
+Status: IN PROGRESS (flow 2 closed 2026-10-09). Branch: `main`, one commit per task, pushed.
 
 Goal: a "Sprint close" report like the reference HTML the user shared (a team's sprint close: work with real status
 movement in the period, split by layer — Frontend, Backend, functional follow-up — and by issue level, grouped by
@@ -36,9 +36,10 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 
 ## Draft tasks (deterministic first)
 
-- [ ] 1. Status transition history in `IssueRow` (proxy projection from the changelog, payload version bump, tests).
-- [ ] 2. Components: read-only fetch of each project's components, `components` on `IssueRow`, component -> layer
-      mapping in the project config (`normalizeConfig`, `validateConfig`, project screen picker).
+- [ ] 1. `IssueRow` gets `statusChanges` (transition history from the changelog) and `components` (`{ id, name }[]`):
+      search fields, projection, payload version bump, demo fixtures, tests.
+- [ ] 2. Component -> layer mapping: read-only `GET /api/jira/projects/:key/components` route, mapping per Jira
+      project key + component id in the config (`normalizeConfig`, `validateConfig`), picker screen.
 - [ ] 3. Outside-the-epics dataset: read-only query for the team members' issues with movement in the period that
       are not under the team's epics (separate section).
 - [ ] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
