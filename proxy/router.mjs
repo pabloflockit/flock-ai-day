@@ -1,7 +1,7 @@
-import { ERROR_CODES, errorEnvelope, okEnvelope } from '../shared/contracts.mjs';
+import { ApiError, ERROR_CODES, errorEnvelope, okEnvelope } from '../shared/contracts.mjs';
 
 /**
- * @typedef {{ method: string, path: string, query: URLSearchParams, headers: import('node:http').IncomingHttpHeaders, deps: any }} RouteContext
+ * @typedef {{ method: string, path: string, query: URLSearchParams, headers: import('node:http').IncomingHttpHeaders, body?: any, deps: any }} RouteContext
  * @typedef {(ctx: RouteContext) => Promise<any> | any} RouteHandler
  * @typedef {{ status: number, body: import('../shared/contracts.mjs').ApiEnvelope }} RouteResult
  */
@@ -44,7 +44,11 @@ export function createRouter() {
       }
       try {
         return { status: 200, body: okEnvelope(await handler(ctx)) };
-      } catch {
+      } catch (error) {
+        if (error instanceof ApiError) {
+          return { status: error.status, body: errorEnvelope(error.code, error.message) };
+        }
+        // Unknown errors may carry sensitive text: never forward their message.
         return { status: 500, body: errorEnvelope(ERROR_CODES.INTERNAL, 'Internal error.') };
       }
     },
