@@ -28,8 +28,8 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
 - [x] 1c. Dashboard refresh after sync — the dashboard must show new data after a sync without a reload.
 - [x] 2. Screenshots — demo mode, dark and light, into `docs/screenshots/` (dashboard, outside view, drill-down,
       report, teams, sync).
-- [ ] 3. README — rewrite per plan §9 phase E, with the screenshots.
-- [ ] 4. Phase and flow 2 close — suites, build, `docs/decisions.md` entry.
+- [x] 3. README — rewrite per plan §9 phase E, with the screenshots.
+- [x] 4. Phase and flow 2 close — suites, build, `docs/decisions.md` entry.
 
 ## Evidence
 - Task 1 (worker): fictional "Carla Demo" (`demo-account-003`, not a team member, searchable, active) assigned
@@ -59,3 +59,12 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
   dashboard picked up the new fixtures without a reload (confirms task 1c in the real app). Privacy: worker and
   parent checked the images — only demo names, `DEMO-*` keys, `example.com` emails and `demo.example.atlassian.net`;
   the token field is empty. No console errors. Commit: `docs: add demo screenshots`.
+- Task 3 (worker + parent review): `README.md` rewritten for the delivered app (pitch + hero screenshot, features and
+  gallery, getting started with the real scripts and demo mode, Atlassian API token and read-only permissions, usage,
+  architecture summary linking `docs/architecture.md`, database security and recovery, decisions, limitations,
+  evolution incl. the planned layered sprint report, layout, testing). Parent fixes: removed an unverifiable claim
+  about Electron's embedded Node; "Integrantes" marked as a team tab. All relative links resolve; no client data.
+  Commit: `docs: rewrite README for the delivered app`.
+- Task 4: no code changed since `bf7d5d6` (last verified: node 468/468, Karma 169/169, `build:desktop` OK), so the
+  suites were not re-run. `docs/decisions.md` entry "Flow 2 phase E close". Flow 2 (phases A–E) closed.
+  Commit: `docs: close flow 2`.
