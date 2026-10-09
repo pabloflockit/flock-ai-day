@@ -4,7 +4,7 @@
  */
 
 /**
- * @typedef {{ code: string, message: string }} ApiError
+ * @typedef {{ code: string, message: string, details?: any }} ApiError
  * @typedef {{ ok: true, data: any }} ApiSuccess
  * @typedef {{ ok: false, error: ApiError }} ApiFailure
  * @typedef {ApiSuccess | ApiFailure} ApiEnvelope
@@ -19,26 +19,31 @@ export const ERROR_CODES = Object.freeze({
   UNAUTHORIZED: 'UNAUTHORIZED',
   FORBIDDEN_ORIGIN: 'FORBIDDEN_ORIGIN',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
   PAYLOAD_TOO_LARGE: 'PAYLOAD_TOO_LARGE',
   EGRESS_BLOCKED: 'EGRESS_BLOCKED',
   SECRETS_UNAVAILABLE: 'SECRETS_UNAVAILABLE',
+  STORAGE_UNAVAILABLE: 'STORAGE_UNAVAILABLE',
+  DATA_KEY_INVALID: 'DATA_KEY_INVALID',
 });
 
 /**
  * Error with an HTTP status and a stable code. The router turns it into an error envelope,
- * so its message must be safe to show: never put secrets or user input in it.
+ * so its message and `details` must be safe to show: never put secrets or user input in them.
  */
 export class ApiError extends Error {
   /**
    * @param {number} status
    * @param {string} code
    * @param {string} message
+   * @param {any} [details] optional structured data for the UI (e.g. validation issues)
    */
-  constructor(status, code, message) {
+  constructor(status, code, message, details) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.details = details;
   }
 }
 
@@ -53,8 +58,9 @@ export function okEnvelope(data) {
 /**
  * @param {string} code
  * @param {string} message
+ * @param {any} [details]
  * @returns {ApiFailure}
  */
-export function errorEnvelope(code, message) {
-  return { ok: false, error: { code, message } };
+export function errorEnvelope(code, message, details) {
+  return { ok: false, error: details === undefined ? { code, message } : { code, message, details } };
 }

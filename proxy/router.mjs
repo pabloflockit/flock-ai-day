@@ -46,7 +46,7 @@ export function createRouter() {
         return { status: 200, body: okEnvelope(await handler(ctx)) };
       } catch (error) {
         if (error instanceof ApiError) {
-          return { status: error.status, body: errorEnvelope(error.code, error.message) };
+          return { status: error.status, body: errorEnvelope(error.code, error.message, error.details) };
         }
         // Unknown errors may carry sensitive text: never forward their message.
         return { status: 500, body: errorEnvelope(ERROR_CODES.INTERNAL, 'Internal error.') };

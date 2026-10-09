@@ -4,19 +4,24 @@ import { ERROR_CODES, errorEnvelope } from '../shared/contracts.mjs';
 import { createRouter } from './router.mjs';
 import { registerHealthRoutes } from './routes/health.mjs';
 import { registerSecretRoutes } from './routes/secrets.mjs';
+import { registerConfigRoutes } from './routes/config.mjs';
 import { createSecretGuard } from './security/session-secret.mjs';
 import { evaluateCors } from './security/cors.mjs';
 
 const ALLOWED_HOST = '127.0.0.1';
 const MAX_BODY_BYTES = 16 * 1024;
+// The configuration document (teams, members, epics) legitimately outgrows 16 KB.
+const MAX_CONFIG_BODY_BYTES = 1024 * 1024;
+const CONFIG_PATH = '/api/config';
 const BODY_METHODS = new Set(['PUT', 'POST', 'PATCH']);
 
 /**
- * Reads a JSON body of at most MAX_BODY_BYTES. An oversized body is drained, not buffered.
+ * Reads a JSON body of at most `limit` bytes. An oversized body is drained, not buffered.
  * @param {import('node:http').IncomingMessage} req
+ * @param {number} limit
  * @returns {Promise<{ body?: any } | { error: GuardResult }>}
  */
-function readJsonBody(req) {
+function readJsonBody(req, limit) {
   return new Promise((resolve, reject) => {
     /** @type {Buffer[]} */
     const chunks = [];
@@ -24,7 +29,7 @@ function readJsonBody(req) {
     let tooLarge = false;
     req.on('data', (chunk) => {
       size += chunk.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > limit) {
         tooLarge = true;
         chunks.length = 0;
       } else if (!tooLarge) {
@@ -78,6 +83,7 @@ function readPackageVersion() {
  *   allowedOrigins?: readonly string[],
  *   secrets?: { getJiraToken(): string | null, setJiraToken(v: string): void, getAiKey(): string | null, setAiKey(v: string): void, getDataKey(): Buffer },
  *   fetch?: typeof fetch,
+ *   stores?: { config?: ReturnType<typeof import('./config/store.mjs').createConfigStore> },
  *   guards?: Array<(ctx: import('./router.mjs').RouteContext) => GuardResult | null | Promise<GuardResult | null>>,
  *   registerRoutes?: Array<(router: ReturnType<typeof createRouter>) => void>,
  * }} ProxyDeps
@@ -92,6 +98,7 @@ function readPackageVersion() {
  *  - `deps.allowedOrigins`: CORS allowlist. A request carrying any other `Origin` gets 403.
  *  - `deps.secrets` / `deps.fetch`: in-process only dependencies (token store, guarded fetch);
  *    never reachable by the renderer.
+ *  - `deps.stores`: `{ config, datasets }` persistence, built from the encrypted SQLite cache.
  *  - `deps.guards`: extra request guards run after the secret check. A guard returns `null` to continue, or a `{ status, body }` result to short-circuit.
  *  - `deps.registerRoutes`: extra route modules from `proxy/routes/`.
  *
@@ -103,12 +110,14 @@ export function createProxyServer(deps) {
     version: deps.version ?? readPackageVersion(),
     secrets: deps.secrets,
     fetch: deps.fetch,
+    stores: deps.stores ?? {},
   };
   const guards = [secretGuard, ...(deps.guards ?? [])];
   const allowedOrigins = deps.allowedOrigins ?? [];
   const router = createRouter();
   registerHealthRoutes(router);
   registerSecretRoutes(router);
+  registerConfigRoutes(router);
   for (const register of deps.registerRoutes ?? []) register(router);
 
   /**
@@ -132,7 +141,10 @@ export function createProxyServer(deps) {
         if (rejected) return rejected;
       }
       if (BODY_METHODS.has(ctx.method.toUpperCase())) {
-        const parsed = await readJsonBody(req);
+        const parsed = await readJsonBody(
+          req,
+          ctx.path === CONFIG_PATH ? MAX_CONFIG_BODY_BYTES : MAX_BODY_BYTES,
+        );
         if ('error' in parsed) return parsed.error;
         ctx.body = parsed.body;
       }

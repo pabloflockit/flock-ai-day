@@ -56,9 +56,24 @@ function getRendererUrl() {
   return isDevMode() ? DEV_ORIGIN : `${APP_ORIGIN}/index.html`;
 }
 
-// TODO(task 4): both come from the stored configuration once it exists.
-const getJiraBaseUrl = () => null;
-const getAllowedHosts = () => [];
+// Both come from the stored configuration (proxy/config/jira-endpoint.mjs). Until the proxy has
+// opened the database they answer "nothing configured" (empty allowlist, fail-closed).
+let jiraEndpoint = { getJiraBaseUrl: () => null, getAllowedHosts: () => [] };
+const getJiraBaseUrl = () => jiraEndpoint.getJiraBaseUrl();
+const getAllowedHosts = () => jiraEndpoint.getAllowedHosts();
+
+const DB_FILE_NAME = 'leadership-panel.db';
+
+// Dev and packaged databases live in different places on purpose: `.cache/` in the repo for
+// `--dev`, `userData` when packaged. Switching modes therefore looks like data loss.
+function getDbPath() {
+  return isDevMode()
+    ? path.join(__dirname, '..', '.cache', DB_FILE_NAME)
+    : path.join(app.getPath('userData'), DB_FILE_NAME);
+}
+
+/** @type {{ close(): void } | undefined} */
+let dbHandle;
 
 // The proxy runs in the main process. The port is the first free one from 3100, so the
 // renderer cannot hardcode it; createMainWindow hands it over through the preload.
@@ -68,6 +83,15 @@ async function startProxy(secrets) {
   const { findAvailablePort } = await load('find-available-port.mjs');
   const { startProxyServer } = await load('server.mjs');
   const { createGuardedFetch } = await load('security/guarded-fetch.mjs');
+  const { openDatabase } = await load('cache/db.mjs');
+  const { createConfigStore } = await load('config/store.mjs');
+  const { createJiraEndpoint } = await load('config/jira-endpoint.mjs');
+  // The database opens without the key; a key that cannot decrypt it surfaces lazily as
+  // DATA_KEY_INVALID on the config/dataset routes (and nothing is overwritten).
+  const handle = openDatabase({ path: getDbPath() });
+  dbHandle = handle;
+  const configStore = createConfigStore({ handle, getDataKey: () => secrets.getDataKey() });
+  jiraEndpoint = createJiraEndpoint(configStore);
   const port = await findAvailablePort(PROXY_PORT_RANGE_START);
   proxyServer = await startProxyServer({
     port,
@@ -76,6 +100,7 @@ async function startProxy(secrets) {
     proxySecret,
     allowedOrigins: getAllowedOrigins({ dev: isDevMode() }),
     secrets,
+    stores: { config: configStore },
     fetch: createGuardedFetch({ fetchImpl: globalThis.fetch, getAllowedHosts }),
   });
 }
@@ -211,4 +236,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   proxyServer?.close();
+  dbHandle?.close();
 });
