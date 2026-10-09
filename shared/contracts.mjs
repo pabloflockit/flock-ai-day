@@ -86,6 +86,8 @@ export function errorEnvelope(code, message, details) {
 /**
  * Flat, typed issue row returned by the proxy (architecture §6.3). The client never reads raw
  * Jira `fields` or `customfield_*`. No derived values live here (they are computed in the domain).
+ * `statusChanges`: every status transition from the changelog, oldest first, ISO instants with `Z`,
+ * status ids (not names). `components`: the issue's Jira components in Jira order (`[]` when none).
  *
  * @typedef {{
  *   key: string,
@@ -103,6 +105,8 @@ export function errorEnvelope(code, message, details) {
  *   firstDoingAt: string | null,
  *   doneAt: string | null,
  *   resolvedAt: string | null,
+ *   statusChanges: Array<{ at: string, fromStatusId: string | null, toStatusId: string }>,
+ *   components: Array<{ id: string, name: string }>,
  *   assigneeAccountId: string | null,
  *   assigneeName: string | null,
  *   priorityName: string | null,

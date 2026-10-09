@@ -36,7 +36,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 
 ## Draft tasks (deterministic first)
 
-- [ ] 1. `IssueRow` gets `statusChanges` (transition history from the changelog) and `components` (`{ id, name }[]`):
+- [x] 1. `IssueRow` gets `statusChanges` (transition history from the changelog) and `components` (`{ id, name }[]`):
       search fields, projection, payload version bump, demo fixtures, tests.
 - [ ] 2. Component -> layer mapping: read-only `GET /api/jira/projects/:key/components` route, mapping per Jira
       project key + component id in the config (`normalizeConfig`, `validateConfig`), picker screen.
@@ -63,3 +63,10 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
     In the user's reference report those rows sit in a layer by their ASSIGNEE (e.g. "Primaria asignada a FE").
   - Consequence: components alone cannot place primaries, analysis subtasks or functional follow-up; a fallback
     by assignee was offered; the user chose components only, with a "Sin capa" section.
+- Task 1 (worker, test-first): `IssueRow.statusChanges` (`{ at, fromStatusId, toStatusId }[]`, oldest first, from the
+  same changelog walk as `statusSince`/`firstDoingAt`/`doneAt`) and `IssueRow.components` (`{ id, name }[]`, Jira
+  order); `components` added to the search fields; `PAYLOAD_VERSION` 1 -> 2 (cached datasets reload fully).
+  Demo: fictional components 20001 FRONTEND, 20002 BACKEND, 20003 Onboarding, 20004 Reporting on project DEMO;
+  demo-fetch serves `GET /rest/api/3/project/DEMO/components`. RED observed for the projection tests (`undefined`
+  fields). node 474/474, Karma 169/169, `build:desktop` OK. `validate-scope` not re-run (projection shape only grew).
+  Commit: `feat(jira): project status history and components into issue rows`.

@@ -216,3 +216,51 @@ test('missing hierarchyLevel is never defaulted to 0: -1 for a subtask flag, els
   // unknown id, embedded type without level either
   assert.equal(projectIssue(raw({}, { issuetype: { id: '99', name: 'Y' } }), ctx()).hierarchyLevel, null);
 });
+
+test('components: projected as { id, name } strings in Jira order; [] when absent or empty', () => {
+  const several = projectIssue(
+    raw({}, { components: [{ self: 'x', id: 20001, name: 'BACKEND' }, { self: 'y', id: '20003', name: 'Reporting' }] }),
+    ctx(),
+  );
+  assert.deepEqual(several.components, [
+    { id: '20001', name: 'BACKEND' },
+    { id: '20003', name: 'Reporting' },
+  ]);
+  assert.deepEqual(projectIssue(raw({}, { components: [] }), ctx()).components, []);
+  assert.deepEqual(projectIssue(raw(), ctx()).components, []);
+  assert.deepEqual(projectIssue(raw({}, { components: null }), ctx()).components, []);
+});
+
+test('searchFields requests components', () => {
+  assert.ok(searchFields({ measureFieldIds: [], epicLinkFieldId: null }).includes('components'));
+});
+
+test('statusChanges: every transition oldest first, by id, ISO Z, consistent with statusSince/doneAt', () => {
+  const row = projectIssue(
+    raw({
+      changelog: {
+        histories: [
+          history('2024-01-09T10:00:00.000-0300', '2', '3'),
+          history('2024-01-06T10:00:00.000+0000', '1', '2'),
+          { created: '2024-01-07T10:00:00.000+0000', items: [{ field: 'assignee', fieldId: 'assignee', from: 'a', to: 'b' }] },
+        ],
+      },
+    }),
+    ctx(),
+  );
+  assert.deepEqual(row.statusChanges, [
+    { at: '2024-01-06T10:00:00.000Z', fromStatusId: '1', toStatusId: '2' },
+    { at: '2024-01-09T13:00:00.000Z', fromStatusId: '2', toStatusId: '3' },
+  ]);
+  assert.equal(row.statusSince, row.statusChanges.at(-1).at);
+  assert.equal(row.doneAt, row.statusChanges.at(-1).at);
+});
+
+test('statusChanges: null from-status on creation transitions; [] without history', () => {
+  const row = projectIssue(
+    raw({ changelog: { histories: [{ created: '2024-01-06T10:00:00.000Z', items: [{ fieldId: 'status', from: null, to: '1' }] }] } }),
+    ctx(),
+  );
+  assert.deepEqual(row.statusChanges, [{ at: '2024-01-06T10:00:00.000Z', fromStatusId: null, toStatusId: '1' }]);
+  assert.deepEqual(projectIssue(raw(), ctx()).statusChanges, []);
+});

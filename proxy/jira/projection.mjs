@@ -37,6 +37,7 @@ const BASE_FIELDS = [
   'updated',
   'duedate',
   'resolutiondate',
+  'components',
 ];
 
 /**
@@ -94,20 +95,22 @@ const isStatusItem = (item) => (item?.fieldId ?? item?.field) === 'status';
  *   directly in a doing status has no such transition, so it stays `null`.
  * - `doneAt`: last transition into a done status (caller falls back to `resolutiondate`). It is
  *   not cleared on reopen: the domain reads it together with the current category.
+ * - `statusChanges`: every transition, oldest first, by status id (`from` is `null` when absent).
  *
  * @param {any} changelog `{ histories }` as returned by Jira
  * @param {(statusId: string) => 'todo' | 'doing' | 'done' | null} categoryOf
  */
 function deriveHistory(changelog, categoryOf) {
   const histories = Array.isArray(changelog?.histories) ? changelog.histories : [];
-  /** @type {Array<{ at: string, ms: number, to: string }>} */
+  /** @type {Array<{ at: string, ms: number, from: string | null, to: string }>} */
   const transitions = [];
   for (const history of histories) {
     const at = toIsoZ(history?.created);
     if (!at) continue;
     for (const item of Array.isArray(history.items) ? history.items : []) {
       if (isStatusItem(item) && item.to !== undefined && item.to !== null) {
-        transitions.push({ at, ms: Date.parse(at), to: String(item.to) });
+        const from = item.from === undefined || item.from === null ? null : String(item.from);
+        transitions.push({ at, ms: Date.parse(at), from, to: String(item.to) });
       }
     }
   }
@@ -121,7 +124,20 @@ function deriveHistory(changelog, categoryOf) {
     if (category === 'doing' && firstDoingAt === null) firstDoingAt = t.at;
     if (category === 'done') doneAt = t.at;
   }
-  return { statusSince, firstDoingAt, doneAt };
+  const statusChanges = transitions.map((t) => ({ at: t.at, fromStatusId: t.from, toStatusId: t.to }));
+  return { statusSince, firstDoingAt, doneAt, statusChanges };
+}
+
+/**
+ * Jira `components` -> `{ id, name }[]` in Jira order; ids as strings, `[]` when absent.
+ * @param {unknown} value
+ * @returns {Array<{ id: string, name: string }>}
+ */
+function projectComponents(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((c) => c && c.id !== undefined && c.id !== null)
+    .map((c) => ({ id: String(c.id), name: typeof c.name === 'string' ? c.name : '' }));
 }
 
 /**
@@ -198,6 +214,8 @@ export function projectIssue(raw, { issueTypesById, statusesById, measureFieldId
     measures,
     createdAt,
     updatedAt,
+    statusChanges: history.statusChanges,
+    components: projectComponents(fields.components),
     dueDate: typeof fields.duedate === 'string' ? (CALENDAR_DATE.exec(fields.duedate)?.[1] ?? null) : null,
   };
 }

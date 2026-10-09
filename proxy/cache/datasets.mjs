@@ -19,7 +19,7 @@ import { buildAad, decryptJson, encryptJson } from './crypto.mjs';
  * Shape version of the stored rows. Increment whenever the row shape changes: it forces a full
  * refresh, otherwise a delta would keep rows in the old shape forever (architecture §6.5).
  */
-export const PAYLOAD_VERSION = 1;
+export const PAYLOAD_VERSION = 2;
 
 const ISO_Z = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 

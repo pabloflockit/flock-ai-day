@@ -230,3 +230,29 @@ test('shows every dashboard feature: a findable non-member with open work, a mem
   );
   assert.ok(open.some((i) => i.fields.assignee === null), 'an open unit stays unassigned');
 });
+
+test('demo issues expose fictional layer components and the project components list', async () => {
+  const f = createDemoFetch({ now: () => NOW });
+  const list = await (await get(f, '/rest/api/3/project/DEMO/components')).json();
+  assert.ok(Array.isArray(list));
+  for (const c of list) assert.ok(c.self && c.id && c.name && c.projectId);
+  const names = list.map((c) => c.name);
+  assert.ok(names.includes('FRONTEND') && names.includes('BACKEND'));
+  assert.equal((await get(f, '/rest/api/3/project/NOPE/components')).status, 404);
+
+  const config = buildDemoConfig();
+  const shards = await fetchProjectIssues({ client: clientFor(f, config), project: config.projects[0], config, sinceMinutes: null });
+  const rows = shards.flatMap((s) => s.rows);
+  const listed = new Set(list.map((c) => c.id));
+  for (const r of rows) for (const c of r.components) assert.ok(listed.has(c.id), `${r.key} ${c.id}`);
+  const layerOf = (r) => r.components.map((c) => c.name).filter((n) => n === 'FRONTEND' || n === 'BACKEND');
+  const subtasks = rows.filter((r) => r.isSubtask);
+  assert.ok(subtasks.some((r) => layerOf(r).includes('FRONTEND')));
+  assert.ok(subtasks.some((r) => layerOf(r).includes('BACKEND')));
+  assert.ok(subtasks.some((r) => r.components.length === 0), 'analysis-like subtask without components');
+  assert.ok(rows.some((r) => !r.isSubtask && r.components.length > 0 && layerOf(r).length === 0), 'area-only primary');
+  const done = rows.find((r) => r.key === 'DEMO-5');
+  assert.equal(done.statusChanges.length, 3);
+  assert.equal(done.statusChanges.at(-1).toStatusId, '4');
+  assert.equal(done.statusChanges.at(-1).at, done.doneAt);
+});

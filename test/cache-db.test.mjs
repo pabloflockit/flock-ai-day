@@ -206,3 +206,9 @@ test('renameAndRecreate keeps the old file as .bak-<timestamp> and opens a fresh
   assert.equal(readdirSync(dir).filter((f) => f.includes('.bak-')).length, 2);
   handle.close();
 });
+
+test('payload version 2: rows cached before statusChanges/components force a full load', () => {
+  assert.equal(PAYLOAD_VERSION, 2);
+  const opts = { now: new Date('2026-01-01T13:00:00.000Z'), fullRefreshMaxAgeHours: 24 };
+  assert.equal(needsFullRefresh({ payloadVersion: 1, fullFetchedAt: '2026-01-01T12:00:00.000Z' }, opts), true);
+});

@@ -1,11 +1,12 @@
 import { readFileSync } from 'node:fs';
-import { DEMO_HOST, EPIC_LINK_FIELD_ID } from './constants.mjs';
-import { FAILING_EPICS, buildIssues } from './issues.mjs';
+import { DEMO_BASE_URL, DEMO_HOST, EPIC_LINK_FIELD_ID } from './constants.mjs';
+import { DEMO_COMPONENTS, DEMO_PROJECT_ID, FAILING_EPICS, buildIssues } from './issues.mjs';
 
 /**
  * A `fetchImpl` that answers Jira Cloud requests from the fictional fixtures in this directory.
  * No network, no credentials. It answers ONLY the endpoints the Jira client uses; everything else
- * (other paths, other methods, other hosts) is a 404.
+ * (other paths, other methods, other hosts) is a 404. `GET /project/DEMO/components` returns the
+ * fictional component list (the proxy route that reads it is a later task).
  *
  * Search understands exactly the JQL shapes the proxy and `tools/validate-scope.mjs` emit, joined
  * with AND:
@@ -240,6 +241,24 @@ export function createDemoFetch({ now = () => Date.now(), failingEpics = FAILING
       default:
     }
 
+    const componentsMatch = /^\/rest\/api\/3\/project\/([^/]+)\/components$/.exec(path);
+    if (componentsMatch) {
+      const projectKey = decodeURIComponent(componentsMatch[1]);
+      if (projectKey !== 'DEMO') return notFound();
+      return respond(
+        200,
+        DEMO_COMPONENTS.map((c) => ({
+          self: `${DEMO_BASE_URL}/rest/api/3/component/${c.id}`,
+          id: c.id,
+          name: c.name,
+          assigneeType: 'PROJECT_DEFAULT',
+          realAssigneeType: 'PROJECT_DEFAULT',
+          isAssigneeTypeValid: false,
+          project: projectKey,
+          projectId: Number(DEMO_PROJECT_ID),
+        })),
+      );
+    }
     const changelogMatch = /^\/rest\/api\/3\/issue\/([^/]+)\/changelog$/.exec(path);
     if (changelogMatch) {
       const issue = byKey.get(decodeURIComponent(changelogMatch[1]));
