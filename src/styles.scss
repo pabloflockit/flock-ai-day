@@ -16,6 +16,15 @@ body {
   min-height: 100%;
 }
 
+// Native controls (select lists, scrollbars, autofill) follow the theme.
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 // Canvas tint; cards and panels always sit on --panel (reference §1 separation rule).
 body {
   font-family: var(--font-sans);
@@ -31,14 +40,14 @@ h1 {
   font-size: var(--fs-display);
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: var(--brand-dark);
+  color: var(--text-strong);
 }
 
 h2 {
   margin: 0 0 var(--space-4);
   font-size: var(--fs-section);
   font-weight: 700;
-  color: var(--brand-dark);
+  color: var(--text-strong);
 }
 
 h3 {
@@ -46,7 +55,7 @@ h3 {
   font-size: var(--fs-card-title);
   font-weight: 700;
   letter-spacing: -0.2px;
-  color: var(--brand-dark);
+  color: var(--text-strong);
 }
 
 p {
@@ -93,7 +102,7 @@ label {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-faint);
+  color: var(--text-label);
 }
 
 input,

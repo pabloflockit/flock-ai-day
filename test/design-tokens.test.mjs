@@ -63,3 +63,34 @@ test('styles outside the token files use no raw colors or font stacks', () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+test('dark theme: app tokens have html.dark values and the app starts dark', () => {
+  const css = readFileSync(join(root, 'src', 'styles', 'flock', 'tokens-app.css'), 'utf8');
+  const dark = css.match(/html\.dark\s*\{([\s\S]*?)\}/);
+  assert.ok(dark, 'tokens-app.css needs an html.dark block');
+  for (const state of ['pending', 'progress', 'blocked', 'done']) {
+    for (const part of ['bg', 'fg']) {
+      assert.match(dark[1], new RegExp(`--state-${state}-${part}\\s*:`), `dark --state-${state}-${part} missing`);
+    }
+  }
+  for (const name of ['--text-strong', '--text-label', '--brand-hover', '--brand-soft-hover', '--row-border', '--overlay-backdrop']) {
+    assert.match(css, new RegExp(`:root[\\s\\S]*${name}\\s*:`), `${name} missing from :root`);
+    assert.match(dark[1], new RegExp(`${name}\\s*:`), `dark ${name} missing`);
+  }
+  const html = readFileSync(join(srcDir, 'index.html'), 'utf8');
+  assert.match(html, /<html[^>]*class="dark"/, 'dark is the default theme (no light flash on start)');
+});
+
+test('text never uses --brand-dark, which stays dark in the dark theme', () => {
+  const offenders = [];
+  for (const file of listStyleFiles(srcDir)) {
+    const rel = relative(root, file);
+    if (tokenFiles.has(rel) || tokenFiles.has(rel.split('/').join(sep))) continue;
+    stripComments(readFileSync(file, 'utf8'))
+      .split('\n')
+      .forEach((line, i) => {
+        if (/(^|[^-])color\s*:\s*var\(--brand-dark\)/.test(line)) offenders.push(`${rel}:${i + 1}`);
+      });
+  }
+  assert.deepEqual(offenders, [], 'use var(--text-strong) for strong text');
+});

@@ -65,6 +65,60 @@
   }
 }
 
+.sidebar-foot {
+  margin-top: auto;
+  padding-top: var(--space-4);
+}
+
+// Theme switch (role="switch"): same rhythm as a sidebar link, with a pill track.
+button.sidebar-switch {
+  width: 100%;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--fs-body);
+  color: var(--on-brand);
+  background: transparent;
+  opacity: 0.78;
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+    background: var(--on-brand-light);
+  }
+
+  .switch-track {
+    position: relative;
+    width: 30px;
+    height: 18px;
+    margin-left: auto;
+    border-radius: var(--radius-pill);
+    background: var(--on-brand-light-hover);
+    transition: background 0.15s;
+  }
+
+  .switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--on-brand);
+    transition: transform 0.15s;
+  }
+
+  &[aria-checked='true'] {
+    opacity: 1;
+
+    .switch-track {
+      background: var(--brand);
+    }
+
+    .switch-thumb {
+      transform: translateX(12px);
+    }
+  }
+}
+
 .app-main {
   min-width: 0;
   padding: var(--space-8) var(--space-8) var(--space-10);
@@ -129,7 +183,7 @@ button.btn-icon {
   height: 30px;
   padding: 0;
   border-radius: var(--radius-icon);
-  color: var(--text-faint);
+  color: var(--text-label);
   background: transparent;
 
   &:hover:not(:disabled) {
@@ -225,7 +279,7 @@ button.btn-icon {
   .stat-number {
     font-size: var(--fs-stat);
     font-weight: 800;
-    color: var(--brand-dark);
+    color: var(--text-strong);
   }
 
   .stat-label {
@@ -281,12 +335,12 @@ button.btn-icon {
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    color: var(--brand-dark);
+    color: var(--text-strong);
     background: transparent;
   }
 
   &.active {
-    color: var(--brand-dark);
+    color: var(--text-strong);
     border-bottom-color: var(--brand);
   }
 }
@@ -329,7 +383,7 @@ button.btn-icon {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     text-align: start;
-    color: var(--text-faint);
+    color: var(--text-label);
     background: var(--surface);
   }
 
@@ -343,7 +397,7 @@ button.btn-icon {
   .num {
     text-align: end;
     font-weight: 700;
-    color: var(--brand-dark);
+    color: var(--text-strong);
   }
 }
 

@@ -1,7 +1,9 @@
 /* App-level names for values documented in the Flock Design System v1.1 reference
    (docs/design/design-system.md). tokens.css is a verbatim copy of the skill and only
    lists these values in comments or component specs, so they are named here once.
-   Nothing in this file is a new design decision: every value maps to a reference section. */
+   Light values map to a reference section. The reference documents dark values only for the
+   core tokens (tokens.css, html.dark); the html.dark block below derives the app tokens from
+   them (translucent state tints over dark panels, see docs/decisions.md). */
 :root {
   /* State triplets — reference §1 "Colores de estado" (bg / fg / bar) */
   --state-pending-bg:  #f1ecf6;
@@ -16,6 +18,12 @@
   --state-done-bg:  #dcf7e6;
   --state-done-fg:  #15803d;
   --state-done-bar: #16a34a;
+
+  /* Strong text (titles, KPI numbers). --brand-dark holds in the dark theme, so text uses this. */
+  --text-strong: var(--brand-dark);
+  /* Uppercase labels, table headers, icon buttons (reference: --text-faint). In dark,
+     --text-faint is a placeholder grey (~2:1 on --panel), so labels move to --text-soft. */
+  --text-label: var(--text-faint);
 
   /* Component colors — reference §5 "Botones", "Chips", "Overlays" and §6 "Tabla de datos" */
   --on-brand: #fff;                              /* text on brand / gradients */
@@ -58,4 +66,29 @@
   --radius-modal: 16px;
   --radius-feature: 18px;
   --radius-pill: 20px;
+}
+
+/* Dark theme for the app tokens (html.dark, reference §7). */
+html.dark {
+  --text-strong: var(--text);
+  --text-label: var(--text-soft);
+
+  --state-pending-bg:  rgba(139,148,158,.16);
+  --state-pending-fg:  #8b949e;
+  --state-pending-bar: #8b949e;
+  --state-progress-bg:  rgba(157,43,214,.18);
+  --state-progress-fg:  #B15EDB;
+  --state-progress-bar: #9D2BD6;
+  --state-blocked-bg:  rgba(225,29,72,.16);
+  --state-blocked-fg:  #fb7185;
+  --state-blocked-bar: #e11d48;
+  --state-done-bg:  rgba(22,163,74,.16);
+  --state-done-fg:  #4ade80;
+  --state-done-bar: #16a34a;
+
+  --brand-hover: #8a22c0;
+  --brand-soft-hover: rgba(157,43,214,.24);
+  --brand-border-faint: rgba(157,43,214,.30);
+  --row-border: rgba(255,255,255,.06);
+  --overlay-backdrop: rgba(0,0,0,.6);
 }

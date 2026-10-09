@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { ThemeService } from './core/theme.service';
 import { ConfirmHost } from './shared/ui/confirm-host';
 import { Icon } from './shared/ui/icon';
 import { ToastHost } from './shared/ui/toast-host';
@@ -25,6 +26,19 @@ import { NAV_SECTIONS } from './shell/nav';
             </a>
           }
         }
+        <div class="sidebar-foot">
+          <button
+            type="button"
+            class="sidebar-switch"
+            role="switch"
+            [attr.aria-checked]="theme.theme() === 'dark'"
+            (click)="theme.toggle()"
+          >
+            <app-icon [name]="theme.theme() === 'dark' ? 'moon' : 'sun'" />
+            <span>Modo oscuro</span>
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+          </button>
+        </div>
       </nav>
       <main class="app-main">
         <router-outlet />
@@ -36,4 +50,5 @@ import { NAV_SECTIONS } from './shell/nav';
 })
 export class App {
   protected readonly sections = NAV_SECTIONS;
+  protected readonly theme = inject(ThemeService);
 }
