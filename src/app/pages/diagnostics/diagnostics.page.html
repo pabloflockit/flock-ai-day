@@ -1,0 +1,239 @@
+<h1>Diagnóstico</h1>
+
+<section>
+  <h2>Servicio local</h2>
+  @switch (health().status) {
+    @case ('ok') {
+      <p>Servicio local activo (versión {{ health().version }}).</p>
+    }
+    @case ('error') {
+      <p role="alert">No se pudo conectar con el servicio local: {{ health().errorMessage }}</p>
+    }
+    @case ('checking') {
+      <p>Verificando…</p>
+    }
+    @default {
+      <p>Sin verificar.</p>
+    }
+  }
+  <button type="button" (click)="recheck()">Verificar de nuevo</button>
+</section>
+
+<section>
+  <h2>Conexión con Jira</h2>
+  @if (configState().status === 'error') {
+    <p role="alert">
+      No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+      {{ configState().error?.code }})
+    </p>
+  }
+
+  <div class="field">
+    <label for="jira-url">URL de Jira</label>
+    <input
+      id="jira-url"
+      type="url"
+      autocomplete="off"
+      placeholder="https://tu-sitio.atlassian.net"
+      [value]="baseUrl()"
+      (input)="baseUrl.set($any($event.target).value)"
+    />
+    <button type="button" [disabled]="verify().status === 'loading'" (click)="verifyUrl()">
+      Verificar
+    </button>
+  </div>
+  @if (verify().status === 'ok') {
+    <p>Sitio verificado: Jira {{ verify().data?.deploymentType }}.</p>
+  }
+  @if (verify().error; as e) {
+    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+
+  <div class="field">
+    <label for="jira-email">Email</label>
+    <input
+      id="jira-email"
+      type="email"
+      autocomplete="off"
+      [value]="email()"
+      (input)="email.set($any($event.target).value)"
+    />
+    <button
+      type="button"
+      [disabled]="!canSaveConnection() || saveConnection().status === 'loading'"
+      (click)="saveJiraConnection()"
+    >
+      Guardar conexión
+    </button>
+  </div>
+  @if (!canSaveConnection()) {
+    <p class="hint">Verificá la URL para poder guardar la conexión.</p>
+  }
+  @if (saveConnection().status === 'ok') {
+    <p>Conexión guardada.</p>
+  }
+  @if (saveConnection().error; as e) {
+    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+
+  <div class="field">
+    <label for="jira-token">Token de API</label>
+    <input
+      id="jira-token"
+      type="password"
+      autocomplete="off"
+      [value]="token()"
+      (input)="token.set($any($event.target).value)"
+    />
+    <button
+      type="button"
+      [disabled]="!token().trim() || saveToken().status === 'loading'"
+      (click)="saveJiraToken()"
+    >
+      Guardar token
+    </button>
+  </div>
+  <p class="hint">El token se guarda cifrado y no se puede volver a ver.</p>
+  @if (saveToken().status === 'ok') {
+    <p>Token guardado.</p>
+  }
+  @if (saveToken().error; as e) {
+    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+
+  <div class="field">
+    <button type="button" [disabled]="testConnection().status === 'loading'" (click)="testJiraConnection()">
+      Probar conexión
+    </button>
+  </div>
+  @if (testConnection().status === 'ok') {
+    <p>Conectado como {{ testConnection().data?.displayName }}.</p>
+  }
+  @if (testConnection().error; as e) {
+    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+</section>
+
+<section>
+  <h2>Épica de prueba</h2>
+  <div class="field">
+    <label for="epic-key">Clave de la épica</label>
+    <input
+      id="epic-key"
+      type="text"
+      autocomplete="off"
+      placeholder="ABC-123"
+      [value]="epicKey()"
+      (input)="epicKey.set($any($event.target).value)"
+    />
+    <button type="button" [disabled]="epicCheck().status === 'loading'" (click)="validateEpic()">
+      Validar
+    </button>
+  </div>
+  @if (epicCheck().status === 'ok') {
+    <p>Épica válida: {{ epicCheck().data?.key }} — {{ epicCheck().data?.summary }}</p>
+  }
+  @if (epicCheck().error; as e) {
+    <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+  }
+
+  <div class="field">
+    <label for="epic-mode">Modo</label>
+    <select
+      id="epic-mode"
+      [value]="mode()"
+      (change)="mode.set($any($event.target).value)"
+    >
+      <option value="delta">Incremental</option>
+      <option value="full">Completo</option>
+    </select>
+    <button
+      type="button"
+      [disabled]="!canFetchRows() || epicDataset().status === 'loading'"
+      (click)="fetchRows()"
+    >
+      Traer filas
+    </button>
+  </div>
+
+  @if (activeEpicKey(); as key) {
+    <h3>Filas de {{ key }}</h3>
+    @if (epicDataset().status === 'loading') {
+      <p>Cargando…</p>
+    }
+    @if (datasetError(); as e) {
+      <p role="alert">{{ e.message }} (código: {{ e.code }})</p>
+    }
+    @if (epicDataset().status === 'ready' || epicDataset().fetchedAt) {
+      <p>
+        Última actualización:
+        @if (epicDataset().fetchedAt) {
+          {{ epicDataset().fetchedAt | instant }}
+        } @else {
+          sin datos todavía
+        }
+        —
+        @if (epicDataset().isCurrent) {
+          <span class="badge">Al día</span>
+        } @else {
+          <span class="badge">Desactualizado</span>
+        }
+      </p>
+    }
+    @for (shard of failedShards(); track shard.key) {
+      <p role="alert">
+        Falló la carga de la épica {{ shard.key }}: {{ shard.message }} (código: {{ shard.code }})
+      </p>
+    }
+    @if (openError(); as message) {
+      <p role="alert">{{ message }}</p>
+    }
+
+    @if (rows().length > 0) {
+      <table>
+        <thead>
+          <tr>
+            <th>Clave</th>
+            <th>Resumen</th>
+            <th>Tipo</th>
+            <th>Estado</th>
+            <th>Responsable</th>
+            <th>En el estado desde</th>
+            <th>Vencimiento</th>
+            <th>Medidas</th>
+            @if (canOpenInJira) {
+              <th></th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of rows(); track item.row.key) {
+            <tr>
+              <td>{{ item.row.key }}</td>
+              <td>{{ item.row.summary }}</td>
+              <td>{{ item.row.issueTypeName }}</td>
+              <td>{{ item.row.statusName }} ({{ item.category }})</td>
+              <td>{{ item.row.assigneeName ?? 'Sin asignar' }}</td>
+              <td>{{ item.row.statusSince | instant }}</td>
+              <td>{{ item.row.dueDate | calendarDate }}</td>
+              <td>
+                @for (measure of item.measures; track measure[0]) {
+                  <div>{{ measure[0] }}: {{ measure[1] ?? '—' }}</div>
+                } @empty {
+                  —
+                }
+              </td>
+              @if (canOpenInJira) {
+                <td>
+                  <button type="button" (click)="openInJira(item.row.key)">Abrir en Jira</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else if (epicDataset().status === 'ready') {
+      <p>No hay filas para esta épica.</p>
+    }
+  }
+</section>

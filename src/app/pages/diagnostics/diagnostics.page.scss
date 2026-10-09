@@ -1,0 +1,41 @@
+// Structural only: the Flock Design System is applied in the next flow.
+:host {
+  display: block;
+  padding: 1rem;
+}
+
+section {
+  margin-block-end: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-block-end: 0.5rem;
+
+  label {
+    min-width: 9rem;
+  }
+
+  input {
+    flex: 1 1 16rem;
+  }
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  padding: 0.25rem 0.5rem;
+  text-align: start;
+  vertical-align: top;
+}
+
+.badge {
+  padding: 0 0.5rem;
+}

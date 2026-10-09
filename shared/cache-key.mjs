@@ -61,15 +61,32 @@ export function canonicalJson(value) {
 }
 
 /**
- * @param {string} scope scope id (e.g. a project id, or 'global')
+ * A scope is a plain id (a project id, 'global') or a typed ref such as `{ type: 'epic', id }`.
+ * A typed ref becomes `<type>:<id>`, so ids of different types can never collide.
+ * @typedef {string | { type: string, id: string }} Scope
+ */
+
+/** @param {Scope} scope @returns {string} */
+function scopeIdOf(scope) {
+  if (typeof scope === 'string') return scope;
+  if (!scope || typeof scope.type !== 'string' || !scope.type || typeof scope.id !== 'string' || !scope.id) {
+    throw new Error('A typed scope needs a non-empty type and id.');
+  }
+  return `${scope.type}:${scope.id}`;
+}
+
+/**
+ * @param {Scope} scope scope (e.g. a project id, `{ type: 'epic', id: 'KEY-1' }`, or 'global')
  * @param {string} source dataset source (e.g. 'projectIssues')
  * @param {unknown} params query-changing parameters
- * @returns {{ paramsKey: string, cacheKey: string }}
- *   `paramsKey` is the `params_key` column; `cacheKey` is `scope|source|paramsKey`.
+ * @returns {{ scopeId: string, paramsKey: string, cacheKey: string }}
+ *   `scopeId` is the `scope_id` column; `paramsKey` is the `params_key` column; `cacheKey` is
+ *   `scopeId|source|paramsKey`.
  */
 export function resolveTarget(scope, source, params) {
+  const scopeId = scopeIdOf(scope);
   const paramsKey = hash64(canonicalJson(params ?? {}));
-  return { paramsKey, cacheKey: `${scope}|${source}|${paramsKey}` };
+  return { scopeId, paramsKey, cacheKey: `${scopeId}|${source}|${paramsKey}` };
 }
 
 /**
@@ -91,4 +108,33 @@ export function projectIssuesParams(project, config) {
     epicLinkMode: config.jira.epicLinkMode,
     epicLinkFieldId: config.jira.epicLinkFieldId,
   };
+}
+
+/**
+ * In-memory project that stands for a single epic (diagnostics `epicIssues` source). It is never
+ * stored in the configuration.
+ * @param {string} epicKey
+ * @returns {import('../proxy/config/normalize.mjs').Project}
+ */
+export function epicProject(epicKey) {
+  return {
+    id: `epic:${epicKey}`,
+    teamId: '',
+    name: epicKey,
+    description: null,
+    active: true,
+    workUnit: 'task',
+    measure: { kind: 'count' },
+    epics: [{ key: epicKey, issueTypeId: '', summary: '', active: true, linkMethodUsed: null }],
+  };
+}
+
+/**
+ * Query-changing parameters of `epicIssues`: the same derivation as a project with this one epic,
+ * so the key moves with the current `jira` link mode exactly like `projectIssues`.
+ * @param {string} epicKey
+ * @param {import('../proxy/config/normalize.mjs').AppConfig} config
+ */
+export function epicIssuesParams(epicKey, config) {
+  return projectIssuesParams(epicProject(epicKey), config);
 }

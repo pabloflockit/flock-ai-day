@@ -1,9 +1,8 @@
-import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
+import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN } from '../../shared/contracts.mjs';
 import { requireJira } from './connection.mjs';
 
 const MIN_QUERY_CHARS = 2;
 const EPIC_HIERARCHY_LEVEL = 1;
-const ISSUE_KEY = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
 
 /** Jira status category key -> app category. Unknown keys (e.g. `undefined`) map to `null`. */
 const CATEGORY = Object.freeze({ new: 'todo', indeterminate: 'doing', done: 'done' });
@@ -63,7 +62,7 @@ export function registerJiraMetaRoutes(router) {
   router.add('GET', '/api/jira/epics/:key', async ({ params, deps }) => {
     const jira = requireJira(deps);
     const key = params?.key ?? '';
-    if (!ISSUE_KEY.test(key)) {
+    if (!ISSUE_KEY_PATTERN.test(key)) {
       throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'La clave de la épica no es válida.');
     }
     const issue = await jira.issue(key, { fields: ['summary', 'issuetype'] });

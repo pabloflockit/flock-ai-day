@@ -1,7 +1,7 @@
 import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
 
-/** Dataset sources the routes serve. Only `projectIssues` exists for now. */
-const SOURCES = new Set(['projectIssues']);
+/** Dataset sources the routes serve. `epicIssues` (scopeId = epic key) feeds the diagnostics page. */
+const SOURCES = new Set(['projectIssues', 'epicIssues']);
 const MODES = new Set(['delta', 'full']);
 
 /** @param {any} deps */
@@ -42,7 +42,8 @@ export function registerDatasetRoutes(router) {
   router.add('GET', '/api/datasets/:source', ({ params, query, deps }) => {
     requireSource(params?.source);
     const scopeId = requireScopeId(query);
-    return requireDatasets(deps).read(scopeId);
+    const service = requireDatasets(deps);
+    return params.source === 'epicIssues' ? service.readEpic(scopeId) : service.read(scopeId);
   });
 
   router.add('POST', '/api/datasets/:source/refresh', ({ params, query, deps }) => {
@@ -52,6 +53,10 @@ export function registerDatasetRoutes(router) {
     if (!MODES.has(mode)) {
       throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'El parámetro mode debe ser delta o full.');
     }
-    return requireDatasets(deps).refresh(scopeId, /** @type {'delta' | 'full'} */ (mode));
+    const service = requireDatasets(deps);
+    const refreshMode = /** @type {'delta' | 'full'} */ (mode);
+    return params.source === 'epicIssues'
+      ? service.refreshEpic(scopeId, refreshMode)
+      : service.refresh(scopeId, refreshMode);
   });
 }

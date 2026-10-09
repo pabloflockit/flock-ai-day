@@ -29,6 +29,9 @@ export class ProxyError extends Error {
   }
 }
 
+/** The proxy could not be reached at all (it may still be starting), as opposed to answering with an error. */
+export const TRANSPORT_ERROR = 'TRANSPORT_ERROR';
+
 @Injectable({ providedIn: 'root' })
 export class ProxyClient {
   readonly baseUrl = window.leadershipPanel?.proxyBaseUrl ?? DEV_PROXY_BASE_URL;
@@ -41,6 +44,10 @@ export class ProxyClient {
   /** Unwraps the `{ ok, data | error }` envelope; transport failures become `TRANSPORT_ERROR`. */
   get<T>(path: string): Promise<T> {
     return this.request<T>('GET', path);
+  }
+
+  post<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('POST', path, body);
   }
 
   /** Write-only secret endpoints answer `{ stored: true }`; the value is never read back. */
@@ -63,7 +70,7 @@ export class ProxyClient {
       envelope = (await response.json()) as ApiEnvelope;
     } catch (error) {
       throw new ProxyError(
-        'TRANSPORT_ERROR',
+        TRANSPORT_ERROR,
         error instanceof Error ? error.message : String(error),
       );
     }

@@ -1,5 +1,5 @@
-import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
-import { projectIssuesParams, resolveTarget } from '../../shared/cache-key.mjs';
+import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN } from '../../shared/contracts.mjs';
+import { epicIssuesParams, epicProject, projectIssuesParams, resolveTarget } from '../../shared/cache-key.mjs';
 import { PAYLOAD_VERSION, needsFullRefresh, readDataset, writeDataset } from '../cache/datasets.mjs';
 import { fetchProjectIssues } from './hierarchy.mjs';
 
@@ -14,6 +14,8 @@ import { fetchProjectIssues } from './hierarchy.mjs';
  */
 
 export const SOURCE = 'projectIssues';
+/** Diagnostics source: the rows of one epic, from a synthetic in-memory project (never in the config). */
+export const EPIC_SOURCE = 'epicIssues';
 /** Extra minutes added to the time since the last successful fetch of an epic. */
 export const DELTA_SAFETY_MARGIN_MINUTES = 5;
 const MS_PER_MINUTE = 60_000;
@@ -29,8 +31,27 @@ function resolveProject(config, projectId) {
   if (!project) {
     throw new ApiError(404, ERROR_CODES.NOT_FOUND, 'El proyecto no existe o está inactivo.');
   }
-  const { paramsKey, cacheKey } = resolveTarget(project.id, SOURCE, projectIssuesParams(project, config));
-  return { project, id: { scopeId: project.id, source: SOURCE, paramsKey }, cacheKey };
+  const { scopeId, paramsKey, cacheKey } = resolveTarget(project.id, SOURCE, projectIssuesParams(project, config));
+  return { project, id: { scopeId, source: SOURCE, paramsKey }, cacheKey };
+}
+
+/**
+ * Cache identity of an epic's diagnostics dataset. The project is synthetic (`epic:<KEY>`, one
+ * active epic, count measure) and the `jira` config is the current one; the key still comes from
+ * `resolveTarget`.
+ * @param {import('../config/normalize.mjs').AppConfig} config
+ * @param {string} epicKey
+ */
+function resolveEpic(config, epicKey) {
+  if (typeof epicKey !== 'string' || !ISSUE_KEY_PATTERN.test(epicKey)) {
+    throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'La clave de la épica no es válida.');
+  }
+  const { scopeId, paramsKey, cacheKey } = resolveTarget(
+    { type: 'epic', id: epicKey },
+    EPIC_SOURCE,
+    epicIssuesParams(epicKey, config),
+  );
+  return { project: epicProject(epicKey), id: { scopeId, source: EPIC_SOURCE, paramsKey }, cacheKey };
 }
 
 /** @param {{ rows: any[], fetchedAt: string | null, isCurrent: boolean, shardsMeta: any[] }} view */
@@ -74,9 +95,24 @@ function reresolveEpicKeys(rows) {
  * }} options `now` is an ISO timestamp with `Z` (or a function returning one)
  */
 export async function refreshProjectIssues({ db, client, config, projectId, mode = 'delta', now }) {
+  return refreshTarget({ db, client, config, target: resolveProject(config, projectId), mode, now });
+}
+
+/**
+ * Same as {@link refreshProjectIssues} for an epic of the diagnostics page (`epicIssues`).
+ * @param {Omit<Parameters<typeof refreshProjectIssues>[0], 'projectId'> & { epicKey: string }} options
+ */
+export async function refreshEpicIssues({ db, client, config, epicKey, mode = 'delta', now }) {
+  return refreshTarget({ db, client, config, target: resolveEpic(config, epicKey), mode, now });
+}
+
+/**
+ * @param {Omit<Parameters<typeof refreshProjectIssues>[0], 'projectId'> & { target: ReturnType<typeof resolveProject> }} options
+ */
+async function refreshTarget({ db, client, config, target, mode = 'delta', now }) {
   const nowIso = typeof now === 'function' ? now() : (now ?? db.handle.now());
   const nowMs = Date.parse(nowIso);
-  const { project, id } = resolveProject(config, projectId);
+  const { project, id } = target;
   const entry = readDataset(db, id);
 
   const full =
@@ -198,6 +234,30 @@ export function createProjectIssuesService({ db, client, getConfig, now = () => 
   /** @type {Map<string, { mode: 'delta' | 'full', promise: Promise<any> }>} */
   const inFlight = new Map();
 
+  /** @param {ReturnType<typeof resolveProject>} target */
+  function readTarget({ id }) {
+    const entry = readDataset(db, id);
+    return entry ? toView(entry) : { rows: [], fetchedAt: null, isCurrent: false, shardsMeta: [] };
+  }
+
+  /**
+   * @param {ReturnType<typeof resolveProject>} target
+   * @param {'delta' | 'full'} mode
+   * @param {(config: import('../config/normalize.mjs').AppConfig, mode: 'delta' | 'full', now: string) => Promise<any>} run
+   */
+  function refreshCoalesced({ cacheKey }, mode, run) {
+    const current = inFlight.get(cacheKey);
+    if (current && (current.mode === 'full' || mode === 'delta')) return current.promise;
+
+    const start = () => run(getConfig(), mode, now());
+    const started = current ? current.promise.then(start, start) : start();
+    const promise = started.finally(() => {
+      if (inFlight.get(cacheKey)?.promise === promise) inFlight.delete(cacheKey);
+    });
+    inFlight.set(cacheKey, { mode, promise });
+    return promise;
+  }
+
   return {
     /**
      * The stored dataset. Never fetched -> `{ rows: [], fetchedAt: null, isCurrent: false,
@@ -205,28 +265,37 @@ export function createProjectIssuesService({ db, client, getConfig, now = () => 
      * @param {string} projectId
      */
     read(projectId) {
-      const { id } = resolveProject(getConfig(), projectId);
-      const entry = readDataset(db, id);
-      return entry ? toView(entry) : { rows: [], fetchedAt: null, isCurrent: false, shardsMeta: [] };
+      return readTarget(resolveProject(getConfig(), projectId));
     },
 
     /**
      * @param {string} projectId
      * @param {'delta' | 'full'} [mode]
      */
-    async refresh(projectId, mode = 'delta') {
-      const { cacheKey } = resolveProject(getConfig(), projectId);
-      const current = inFlight.get(cacheKey);
-      if (current && (current.mode === 'full' || mode === 'delta')) return current.promise;
+    refresh(projectId, mode = 'delta') {
+      const target = resolveProject(getConfig(), projectId);
+      return refreshCoalesced(target, mode, (config, m, nowIso) =>
+        refreshProjectIssues({ db, client, config, projectId, mode: m, now: nowIso }),
+      );
+    },
 
-      const run = () =>
-        refreshProjectIssues({ db, client, config: getConfig(), projectId, mode, now: now() });
-      const started = current ? current.promise.then(run, run) : run();
-      const promise = started.finally(() => {
-        if (inFlight.get(cacheKey)?.promise === promise) inFlight.delete(cacheKey);
-      });
-      inFlight.set(cacheKey, { mode, promise });
-      return promise;
+    /**
+     * Diagnostics source `epicIssues`: same envelope, degradation and coalescing, scoped by epic key.
+     * @param {string} epicKey
+     */
+    readEpic(epicKey) {
+      return readTarget(resolveEpic(getConfig(), epicKey));
+    },
+
+    /**
+     * @param {string} epicKey
+     * @param {'delta' | 'full'} [mode]
+     */
+    refreshEpic(epicKey, mode = 'delta') {
+      const target = resolveEpic(getConfig(), epicKey);
+      return refreshCoalesced(target, mode, (config, m, nowIso) =>
+        refreshEpicIssues({ db, client, config, epicKey, mode: m, now: nowIso }),
+      );
     },
   };
 }

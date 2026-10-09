@@ -15,7 +15,7 @@ Branch: `main` (user decision: commit each task directly on `main` and push righ
 - [x] 4. Cache and config — `node:sqlite` schema, AES-256-GCM payloads and config, dataset read/write, `resolveTarget`, `normalizeConfig`, `validateConfig` base.
 - [x] 5. Jira client and projection (split for review size: 5a client, metadata, connection routes; 5b projection, hierarchy, refresh, dataset routes) — client (pagination via `nextPageToken`, backoff, error codes, injectable fetch), `IssueRow` projection, hierarchy by `epicLinkMode`, delta/full refresh, `PAYLOAD_VERSION`, stale-not-empty degradation, dataset routes.
 - [x] 6. Domain dates — UTC utilities, calendar date vs instant formatters, `businessDaysBetween`, local-calendar weeks, `effectiveCategory`.
-- [ ] 7. Diagnostics, demo, validator — signal store with key-based hydration, diagnostics page, `--demo` mode with fixture fetch and separate DB, `tools/validate-scope.mjs`, section 12 checklist pass.
+- [ ] 7. Diagnostics, demo, validator (split: 7a store hydration + diagnostics page + `epicIssues` source; 7b demo mode, fixtures, `validate-scope`; 7c independent section 12 checklist verification) — signal store with key-based hydration, diagnostics page, `--demo` mode with fixture fetch and separate DB, `tools/validate-scope.mjs`, section 12 checklist pass.
 
 ## Evidence
 
@@ -30,3 +30,5 @@ Branch: `main` (user decision: commit each task directly on `main` and push righ
 - Task 5b: `node --test` 291/291, `ng build` ok, fake client only. Per-epic delta window from each epic's `lastOkAt` + 5 min; failed epics keep cached rows, `is_current = 0`; metadata failure marks all shards failed instead of throwing; refresh coalescing per key. Known limits for flow 2: `doneAt` is not cleared on reopen (domain must read it with the current category); `firstDoingAt` is `null` for issues created directly in a doing status; changelog completion can peak at ~36 concurrent requests. VERIFY-2/3/4 handled in code, not probed live.
 - Task 5b commit: `f6963bd`.
 - Task 6: `node --test` 322/322, `ng build` ok (pipes compile, not yet used in a template). Conventions: business days counted in `(from, to]` on local calendar dates, reversed args negate, `isStale` strict `>`, `timeZone` required in pure functions, `effectiveDoneAt` returns `null` unless the effective category is done.
+- Task 6 commit: `d1977c7`.
+- Task 7a: `node --test` 330/330, Karma 14/14, `ng build` and `build:desktop` ok; `shared/cache-key.mjs` runtime import confirmed in the Angular bundle. Packaged smoke over CDP: diagnostics renders on `app://leadership-panel/#/diagnostics`, health ok, bridge has 5 keys, unconfigured epic shows `JIRA_NOT_CONFIGURED`. Not exercised live: verify, save token, test connection, real epic (no token). Follow-ups: `epicIssues` rows have no TTL/cleanup; a few proxy messages still English.
