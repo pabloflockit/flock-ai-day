@@ -32,7 +32,7 @@ work not assigned to the team appears only in its own section; statuses and char
 - [x] 2. `teamScope` / `teamOutside` domain — test-first.
 - [x] 3. Metrics M1–M6 and F1–F2 domain — test-first.
 - [x] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
-- [ ] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
+- [x] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
 - [ ] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
 - [ ] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
 
@@ -58,3 +58,12 @@ work not assigned to the team appears only in its own section; statuses and char
   already green after a truncated heredoc run); no mutation check. The `''` redirect stays on `connection` (no
   "configured" notion). Pending for task 5: scope `tasksWithoutSubtasks` to the team.
   Commit: `feat(dashboard): add dashboard data and view state`.
+- Task 5 (worker + parent): `dashboard-group` (one section per measurement group: KPIs M3/M5, M1 progress per
+  project/epic, M2 stacked status bars, M3 per member, M4 load bars, M5 table, M6 weekly bars, tasks-without-subtasks
+  notice), reusable `shared/ui/unit-list-modal` drill-down (key opens Jira via `openInJira`), `measure-format`
+  (hours for `time_seconds`), state `tasksWithoutSubtasksScoped` and per-group lists. Status colors: todo
+  `--state-pending-*`, doing `--state-progress-*`, done `--state-done-*`. Parent review: exported `measureKeyOf`
+  from `metrics.mjs` instead of a duplicate in the state. Verify (gentle-ai-verify): node 457/457, Karma 150/150,
+  `build:desktop` OK, no warnings. Specs were written after the code (no RED). Demo dark screenshot by the worker:
+  one group renders correctly; two side-by-side groups and the todo grey were not seen rendered.
+  Commit: `feat(dashboard): add metrics UI with drill-down`.

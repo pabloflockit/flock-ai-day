@@ -14,6 +14,7 @@ let nextModalId = 1;
     <div class="modal-backdrop" (click)="closed.emit()">
       <div
         class="modal"
+        [class.modal-wide]="wide()"
         role="dialog"
         aria-modal="true"
         [attr.aria-labelledby]="titleId"
@@ -34,6 +35,8 @@ let nextModalId = 1;
 })
 export class Modal {
   readonly title = input.required<string>();
+  /** Wide variant for tables (drill-down lists). */
+  readonly wide = input(false);
   readonly closed = output<void>();
   protected readonly titleId = `modal-title-${nextModalId++}`;
 

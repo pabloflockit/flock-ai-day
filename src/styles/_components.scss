@@ -436,6 +436,15 @@ button.btn-icon {
   animation: pop 0.15s ease;
 }
 
+.modal-wide {
+  max-width: 56rem;
+  max-height: 90vh;
+
+  .modal-body {
+    overflow-y: auto;
+  }
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -583,6 +592,87 @@ button.toast-close {
   }
 
   &.is-done .progress-fill {
+    background: var(--state-done-bar);
+  }
+}
+
+// ---- Dashboard charts (CSS only): category colors follow plan §5.3 --------------------------
+.num-link {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-icon);
+  font: inherit;
+  font-weight: 700;
+  color: var(--brand);
+  background: none;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    text-decoration: underline;
+  }
+
+  &:disabled {
+    color: inherit;
+    cursor: default;
+  }
+}
+
+.stack-bar {
+  display: flex;
+  gap: 2px;
+  height: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+
+  .seg {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+  }
+}
+
+.seg-todo {
+  background: var(--state-pending-bar);
+}
+
+.seg-doing {
+  background: var(--state-progress-bar);
+}
+
+.seg-done {
+  background: var(--state-done-bar);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-secondary);
+  color: var(--text-soft);
+
+  li::before {
+    content: '';
+    display: inline-block;
+    width: var(--space-3);
+    height: var(--space-3);
+    margin-inline-end: 6px;
+    border-radius: var(--radius-icon);
+    vertical-align: middle;
+    background: var(--state-pending-bar);
+  }
+
+  .legend-doing::before {
+    background: var(--state-progress-bar);
+  }
+
+  .legend-done::before {
     background: var(--state-done-bar);
   }
 }

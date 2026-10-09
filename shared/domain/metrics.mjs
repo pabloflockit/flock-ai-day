@@ -38,8 +38,8 @@ export function aggregate(units) {
 /** @param {WorkUnit[]} units @returns {Bucket} */
 const bucket = (units) => ({ ...aggregate(units), units });
 
-/** @param {Measure} measure */
-const measureKeyOf = (measure) => (measure.kind === 'count' ? 'count' : `field:${measure.fieldId}`);
+/** Group key of a project measure: `count` or `field:<fieldId>`. @param {Measure} measure */
+export const measureKeyOf = (measure) => (measure.kind === 'count' ? 'count' : `field:${measure.fieldId}`);
 
 /**
  * Groups by unit type + project measure so 'both' projects and differently measured projects never mix.

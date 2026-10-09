@@ -1,5 +1,11 @@
 <header class="page-header">
   <h1>Dashboard</h1>
+  @if (configState().status === 'ready' && state.activeTeams().length > 0) {
+    <p class="outside">
+      {{ state.outsideOpenCount() }}
+      {{ state.outsideOpenCount() === 1 ? 'unidad fuera del equipo' : 'unidades fuera del equipo' }}
+    </p>
+  }
 </header>
 
 @if (configState().status === 'error') {
@@ -66,16 +72,31 @@
       @if (state.loading()) {
         <p class="field-hint" role="status">Cargando datos…</p>
       }
-      <dl class="counts">
-        <div>
-          <dt>Unidades en el alcance</dt>
-          <dd>{{ state.scoped().length }}</dd>
-        </div>
-        <div>
-          <dt>Abiertas fuera del equipo</dt>
-          <dd>{{ state.outsideOpenCount() }}</dd>
-        </div>
-      </dl>
     </section>
+
+    @if (state.projects().length === 0) {
+      <div class="card empty"><p>Este equipo no tiene proyectos activos.</p><div><a routerLink="/teams">Ir a Equipos</a></div></div>
+    } @else if (state.missingDatasets().length === state.projects().length) {
+      <div class="card empty">
+        <p>Todavía no hay datos para este equipo.</p>
+        <div><a routerLink="/sync">Ir a Sincronización</a></div>
+      </div>
+    } @else if (state.groups().length === 0) {
+      @if (!state.loading()) {
+        <div class="card empty">
+          <p>No hay unidades para mostrar con estos filtros.</p>
+        </div>
+      }
+    } @else {
+      <div class="groups">
+        @for (group of state.groups(); track group.unitType + group.measureKey) {
+          <app-dashboard-group [group]="group" (drill)="drill.set($event)" />
+        }
+      </div>
+    }
   }
+}
+
+@if (drill(); as d) {
+  <app-unit-list-modal [title]="d.title" [units]="d.units" [measure]="d.measure" (closed)="drill.set(null)" />
 }

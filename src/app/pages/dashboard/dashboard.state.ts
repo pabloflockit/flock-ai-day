@@ -2,6 +2,7 @@ import { Injectable, computed, effect, inject, linkedSignal, untracked } from '@
 import type { AppConfig } from '../../../../proxy/config/normalize.mjs';
 import {
   loadByMember,
+  measureKeyOf,
   measurementGroups,
   progress,
   staleUnits,
@@ -107,6 +108,12 @@ export class DashboardState {
     const teamId = this.teamId();
     return config && teamId ? this.#filter(teamScope(this.units(), teamId, config)) : [];
   });
+  /** Tasks without subtasks (plan §3) with the same team scope and project/epic filters as `scoped`. */
+  readonly tasksWithoutSubtasksScoped = computed<Units>(() => {
+    const config = this.config();
+    const teamId = this.teamId();
+    return config && teamId ? this.#filter(teamScope(this.tasksWithoutSubtasks(), teamId, config)) : [];
+  });
   readonly outside = computed(() => {
     const config = this.config();
     const teamId = this.teamId();
@@ -125,8 +132,17 @@ export class DashboardState {
     if (!config) return [];
     const members = this.team()?.members.filter((m) => m.active) ?? [];
     const clock = { now: this.now(), timeZone: this.timeZone };
+    const withoutSubtasks = this.tasksWithoutSubtasksScoped();
     return measurementGroups(this.scoped(), projects).map((group) => ({
       ...group,
+      // Only subtask groups report them, and only the tasks of the projects measured by this group.
+      tasksWithoutSubtasks:
+        group.unitType === 'subtask'
+          ? withoutSubtasks.filter((t) => {
+              const measure = projects.find((p) => p.id === t.projectId)?.measure;
+              return !!measure && measureKeyOf(measure) === group.measureKey;
+            })
+          : [],
       progress: progress(group.units, projects),
       statusDistribution: statusDistribution(group.units),
       workInProgress: workInProgress(group.units, members),
@@ -144,3 +160,5 @@ export class DashboardState {
     });
   }
 }
+
+export type DashboardGroup = DashboardState['groups'] extends () => (infer G)[] ? G : never;

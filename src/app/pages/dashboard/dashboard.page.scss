@@ -1,7 +1,7 @@
 // Dashboard page — Flock Design System tokens only (docs/design/design-system.md).
 :host {
   display: block;
-  max-width: 64rem;
+  max-width: 90rem;
 }
 
 .filter-bar {
@@ -11,7 +11,8 @@
 .summary {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
+  margin-block-end: var(--space-5);
 
   h2,
   p {
@@ -19,22 +20,16 @@
   }
 }
 
-.counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  margin: 0;
+.outside {
+  font-weight: 600;
+  color: var(--text-soft);
+}
 
-  dt {
-    font-size: var(--fs-caption);
-    color: var(--text-label);
-  }
-
-  dd {
-    margin: 0;
-    font-size: var(--fs-stat);
-    font-weight: 600;
-  }
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 34rem), 1fr));
+  gap: var(--space-5);
+  align-items: start;
 }
 
 .empty {

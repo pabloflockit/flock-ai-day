@@ -1,0 +1,257 @@
+<section class="card group" [attr.aria-label]="title()">
+  <h2>{{ title() }}</h2>
+
+  <div class="kpis">
+    <div class="stat-card">
+      <div class="stat-number">
+        <button type="button" class="num-link" [disabled]="group().workInProgress.total.count === 0" (click)="show('En curso', group().workInProgress.total.units)">
+          {{ group().workInProgress.total.count }}
+        </button>
+      </div>
+      <div class="stat-label">
+        En curso
+        @if (isField()) {
+          <button type="button" class="num-link" [disabled]="group().workInProgress.total.count === 0" (click)="show('En curso', group().workInProgress.total.units)">
+            {{ measureText(group().workInProgress.total.measure) }} {{ measureName() }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">
+        <button type="button" class="num-link" [disabled]="group().stale.length === 0" (click)="show('Estancadas', staleUnits())">
+          {{ group().stale.length }}
+        </button>
+      </div>
+      <div class="stat-label">Estancadas</div>
+    </div>
+  </div>
+
+  @if (group().tasksWithoutSubtasks.length > 0) {
+    <p class="notice" role="status">
+      <button type="button" class="num-link" (click)="showTasksWithoutSubtasks()">
+        {{ tasksWithoutSubtasksText(group().tasksWithoutSubtasks.length) }}
+      </button>
+    </p>
+  }
+
+  <ul class="legend" aria-label="Categorías de estado">
+    @for (category of categories; track category) {
+      <li [class]="'legend-' + category">{{ categoryLabel[category] }}</li>
+    }
+  </ul>
+
+  <!-- M1 progress -->
+  <section class="metric">
+    <h3>Avance</h3>
+    <ng-template #row let-name="name" let-done="done" let-total="total" let-nested="nested">
+      <div class="progress-row" [class.nested]="nested">
+        <div class="progress-head">
+          <span class="progress-name">{{ name }}</span>
+          @if (percent(done, total); as pct) {
+            <span class="text-mono pct">{{ pct }}%</span>
+          } @else if (total.measure === 0 && total.missingMeasure.length > 0) {
+            <span class="field-hint">Faltan datos de {{ fieldName() }}</span>
+          } @else if (done.measure === 0 && total.measure > 0) {
+            <span class="text-mono pct">0%</span>
+          } @else {
+            <span class="field-hint">Sin medida cargada</span>
+          }
+        </div>
+        <div
+          class="progress is-done"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="percent(done, total) ?? 0"
+          [attr.aria-label]="name"
+        >
+          <div class="progress-fill" [style.width.%]="percent(done, total) ?? 0"></div>
+        </div>
+        <p class="progress-numbers">
+          <button type="button" class="num-link" [disabled]="done.count === 0" (click)="show('Hechas · ' + name, done.units)">{{ amount(done) }}</button>
+          hechas de
+          <button type="button" class="num-link" (click)="show('Total · ' + name, total.units)">{{ amount(total) }}</button>
+          @if (total.missingMeasure.length > 0) {
+            ·
+            <button type="button" class="num-link missing" (click)="show('Sin ' + fieldName() + ' · ' + name, total.missingMeasure)">
+              {{ missingText(total.missingMeasure.length) }}
+            </button>
+          }
+        </p>
+      </div>
+    </ng-template>
+    @for (p of group().progress; track p.projectId) {
+      <ng-container
+        [ngTemplateOutlet]="row"
+        [ngTemplateOutletContext]="{ name: p.projectName, done: p.done, total: p.total, nested: false }"
+      />
+      @if (p.epics.length > 0) {
+        <details class="epics">
+          <summary>Épicas ({{ p.epics.length }})</summary>
+          @for (e of p.epics; track e.epicKey) {
+            <ng-container
+              [ngTemplateOutlet]="row"
+              [ngTemplateOutletContext]="{ name: e.epicKey + ' · ' + e.epicSummary, done: e.done, total: e.total, nested: true }"
+            />
+          }
+        </details>
+      }
+    } @empty {
+      <p class="field-hint">Sin unidades.</p>
+    }
+  </section>
+
+  <!-- M2 status distribution -->
+  <section class="metric">
+    <h3>Estados por épica</h3>
+    @for (e of group().statusDistribution; track e.epicKey) {
+      <div class="dist-row">
+        <div class="progress-head">
+          <span class="progress-name">{{ e.epicKey }} · {{ epicSummaries().get(e.epicKey) ?? '' }}</span>
+        </div>
+        <div class="stack-bar" role="group" [attr.aria-label]="'Estados de ' + e.epicKey">
+          @for (c of e.categories; track c.category) {
+            @for (s of c.statuses; track s.statusId) {
+              <button
+                type="button"
+                [class]="'seg seg-' + c.category"
+                [style.flex-grow]="s.count"
+                [title]="s.statusName + ': ' + s.count"
+                [attr.aria-label]="s.statusName + ': ' + s.count"
+                (click)="show(s.statusName + ' · ' + e.epicKey, s.units)"
+              ></button>
+            }
+          }
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- M3 work in progress per member -->
+  <section class="metric">
+    <h3>En curso por persona</h3>
+    @if (group().workInProgress.byMember.length === 0) {
+      <p class="field-hint">Nadie tiene trabajo en curso.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Persona</th>
+              <th class="num">En curso</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of group().workInProgress.byMember; track m.accountId) {
+              <tr>
+                <td>{{ m.displayName }}</td>
+                <td class="num">
+                  <button type="button" class="num-link" (click)="show('En curso · ' + m.displayName, m.units)">{{ amount(m) }}</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- M4 open load per member (alphabetical, no ranking) -->
+  <section class="metric">
+    <h3>Carga abierta por persona</h3>
+    @for (m of group().load; track m.accountId) {
+      <div class="load-row">
+        <span class="progress-name">{{ m.displayName }}</span>
+        <div class="load-track">
+          @if (m.open.count === 0) {
+            <span class="field-hint">Sin carga</span>
+          } @else {
+            <div class="stack-bar" [style.width.%]="barPercent(m.open, loadMax())">
+              @if (m.todo.count > 0) {
+                <button
+                  type="button"
+                  class="seg seg-todo"
+                  [style.flex-grow]="barValue(m.todo, loadMax())"
+                  [title]="'Por hacer: ' + m.todo.count"
+                  [attr.aria-label]="m.displayName + ' · Por hacer: ' + m.todo.count"
+                  (click)="show('Por hacer · ' + m.displayName, m.todo.units)"
+                ></button>
+              }
+              @if (m.doing.count > 0) {
+                <button
+                  type="button"
+                  class="seg seg-doing"
+                  [style.flex-grow]="barValue(m.doing, loadMax())"
+                  [title]="'En curso: ' + m.doing.count"
+                  [attr.aria-label]="m.displayName + ' · En curso: ' + m.doing.count"
+                  (click)="show('En curso · ' + m.displayName, m.doing.units)"
+                ></button>
+              }
+            </div>
+          }
+        </div>
+        <button type="button" class="num-link" [disabled]="m.open.count === 0" (click)="show('Carga abierta · ' + m.displayName, m.open.units)">
+          {{ amount(m.open) }}
+        </button>
+      </div>
+    } @empty {
+      <p class="field-hint">El equipo no tiene miembros activos.</p>
+    }
+  </section>
+
+  <!-- M5 stale -->
+  <section class="metric">
+    <h3>Estancadas</h3>
+    @if (group().stale.length === 0) {
+      <p class="field-hint">No hay unidades estancadas.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Clave</th>
+              <th>Resumen</th>
+              <th>Estado</th>
+              <th>Responsable</th>
+              <th class="num">Días hábiles</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (s of group().stale; track s.unit.key) {
+              <tr>
+                <td class="text-mono">{{ s.unit.key }}</td>
+                <td>{{ s.unit.summary }}</td>
+                <td><span [class]="'status-chip ' + stateClass(s.unit)">{{ s.unit.statusName }}</span></td>
+                <td>{{ s.unit.assigneeName ?? 'Sin asignar' }}</td>
+                <td class="num text-mono">{{ s.days }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- M6 weekly throughput -->
+  <section class="metric">
+    <h3>Cierres por semana</h3>
+    @if (!group().throughput.hasDoneData) {
+      <p class="field-hint">Todavía no hay cierres registrados</p>
+    } @else {
+      <div class="weeks">
+        @for (w of group().throughput.weeks; track w.weekKey) {
+          <div class="week">
+            <button type="button" class="num-link" [disabled]="w.count === 0" (click)="show('Cierres · semana del ' + weekLabel(w.weekStart), w.units)">
+              {{ shortAmount(w) }}
+            </button>
+            <div class="week-bar-slot">
+              <div class="week-bar seg-done" [style.height.%]="barPercent(w, weekMax())"></div>
+            </div>
+            <span class="field-hint">{{ weekLabel(w.weekStart) }}</span>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</section>
