@@ -26,7 +26,7 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
 - [x] 1b. Public docs — sanitized `docs/architecture.md` and `docs/plan.md` tracked; originals and the
       reference audit in `docs/private/`; no reference-project mention left in tracked files.
 - [x] 1c. Dashboard refresh after sync — the dashboard must show new data after a sync without a reload.
-- [ ] 2. Screenshots — demo mode, dark and light, into `docs/screenshots/` (dashboard, outside view, drill-down,
+- [x] 2. Screenshots — demo mode, dark and light, into `docs/screenshots/` (dashboard, outside view, drill-down,
       report, teams, sync).
 - [ ] 3. README — rewrite per plan §9 phase E, with the screenshots.
 - [ ] 4. Phase and flow 2 close — suites, build, `docs/decisions.md` entry.
@@ -54,3 +54,8 @@ Safety: every command with all `JIRA_*` vars unset; never list environment varia
   Parent checks: no tokens, emails, local paths or reference-project names in the public docs; "(private, local
   only)" notes removed from the phase task docs. Git history still holds the old text (no rewrite, user informed).
   Commit: `docs: publish architecture and plan without reference-project details`.
+- Task 2 (worker): 8 PNGs in `docs/screenshots/` from demo mode only (dashboard dark 1440x1800 and light, outside,
+  drill-down, client report, team, sync, connection), 80–168 KB each. Demo DB refreshed with "Carga completa"; the
+  dashboard picked up the new fixtures without a reload (confirms task 1c in the real app). Privacy: worker and
+  parent checked the images — only demo names, `DEMO-*` keys, `example.com` emails and `demo.example.atlassian.net`;
+  the token field is empty. No console errors. Commit: `docs: add demo screenshots`.
