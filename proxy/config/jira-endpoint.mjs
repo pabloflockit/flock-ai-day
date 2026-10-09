@@ -1,4 +1,5 @@
 import { validateJiraUrl } from '../../shared/jira-url.mjs';
+import { AI_HOST } from '../ai/prompt.mjs';
 
 /**
  * The Jira origin and egress host derived from the stored configuration, for the Electron main
@@ -20,12 +21,21 @@ export function createJiraEndpoint(configStore) {
       return null;
     }
   };
+  const aiEnabled = () => {
+    try {
+      return configStore?.load().settings.ai.enabled === true;
+    } catch {
+      return false;
+    }
+  };
   return {
     getJiraBaseUrl: () => current()?.origin ?? null,
-    // TODO(AI feature): add the AI provider host here while `settings.ai.enabled` is true.
+    // The AI provider host is reachable ONLY while `settings.ai.enabled` is true (architecture 4.4).
     getAllowedHosts: () => {
       const jira = current();
-      return jira ? [jira.host] : [];
+      const hosts = jira ? [jira.host] : [];
+      if (aiEnabled()) hosts.push(AI_HOST);
+      return hosts;
     },
   };
 }

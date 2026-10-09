@@ -12,6 +12,7 @@ import { formatCalendarDate, formatInstant } from './format.mjs';
  * @typedef {import('./sprint-close.mjs').Kpis} Kpis
  * @typedef {{
  *   title: string, teamName: string, generatedAt: string, timeZone: string, jiraBaseUrl?: string | null,
+ *   narrative?: { headlines: string[], reading: string } | null,
  * }} SprintCloseHtmlOptions
  */
 
@@ -52,11 +53,17 @@ section.layer h2{margin:0;font-size:18px;color:var(--brand-dark)}
 .chip-blocked{background:var(--blocked-bg);color:var(--blocked-fg);box-shadow:inset 0 0 0 1px var(--blocked-fg)}
 .mark{font-size:11px;font-weight:600;color:var(--done-fg)}
 .ref{display:inline-block;border:1px solid var(--border-strong);border-radius:50px;padding:0 6px;font-size:11px;color:var(--text-soft);background:var(--surface)}
+.narrative{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--brand);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+.narrative h2{margin:0 0 8px;font-size:18px;color:var(--brand-dark)}
+.narrative h3{margin:12px 0 4px;font-size:14px;color:var(--brand-dark)}
+.narrative ul{margin:0;padding-left:20px}
+.narrative p{margin:0 0 8px;white-space:pre-line}
+.narrative .ai-note{font-size:11px;color:var(--text-faint)}
 .hygiene{background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:16px}
 .hygiene h2{margin:0 0 8px;font-size:18px;color:var(--brand-dark)}
 .hygiene ul{margin:0;padding-left:20px}
 .empty{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;color:var(--text-soft)}
-@media print{body{background:#fff;font-size:12px}main{max-width:none;padding:0}header.top{background:#fff;color:var(--text);border:1px solid var(--border-strong)}.kpi,section.layer,.hygiene{box-shadow:none;break-inside:avoid-page}.row{break-inside:avoid}}
+@media print{body{background:#fff;font-size:12px}main{max-width:none;padding:0}header.top{background:#fff;color:var(--text);border:1px solid var(--border-strong)}.kpi,section.layer,.hygiene,.narrative{box-shadow:none;break-inside:avoid-page}.row{break-inside:avoid}}
 `;
 
 /** @param {unknown} value */
@@ -186,6 +193,18 @@ export function renderSprintCloseHtml(report, options) {
           .map((n) => `<li>${noteText(n)}</li>`)
           .join('')}</ul></section>`;
 
+  const headlines = (options.narrative?.headlines ?? []).filter((h) => String(h).trim() !== '');
+  const reading = String(options.narrative?.reading ?? '').trim();
+  const narrative =
+    headlines.length === 0 && reading === ''
+      ? ''
+      : `<section class="narrative">` +
+        (headlines.length === 0
+          ? ''
+          : `<h2>Titulares</h2><ul>${headlines.map((h) => `<li>${esc(h)}</li>`).join('')}</ul>`) +
+        (reading === '' ? '' : `<h2>Lectura del sprint</h2><p>${esc(reading)}</p>`) +
+        `<p class="ai-note">Redactado con IA y revisado por el equipo</p></section>`;
+
   const empty =
     report.layers.length === 0 && report.outside.epics.length === 0
       ? '<div class="empty">No hubo movimiento de estados en el período.</div>'
@@ -201,6 +220,6 @@ export function renderSprintCloseHtml(report, options) {
     `<header class="top"><h1>${esc(options.title)}</h1>` +
     `<p>${esc(options.teamName)} · ${period}</p><p>Generado el ${esc(generated)}</p></header>` +
     `<div class="kpis">${kpiCards(report.kpis)}</div>` +
-    `${empty}${layerSections}${outside}${hygiene}</main></body></html>\n`
+    `${narrative}${empty}${layerSections}${outside}${hygiene}</main></body></html>\n`
   );
 }

@@ -65,15 +65,24 @@ interface Options {
   config?: unknown;
   statusesFail?: boolean;
   datasets?: Record<string, unknown>;
+  aiEnabled?: boolean;
+  aiKeyStored?: boolean;
+  aiAnswer?: unknown;
+  aiFails?: boolean;
 }
 
-async function render({ config = baseConfig(), statusesFail = false, datasets = {} }: Options = {}) {
+async function render({ config = baseConfig(), statusesFail = false, datasets = {}, aiEnabled = false, aiKeyStored = false, aiAnswer, aiFails = false }: Options = {}) {
+  const effectiveConfig = aiEnabled ? { ...(config as object), settings: { ai: { enabled: true } } } : config;
   const post = jasmine.createSpy('post').and.callFake((path: string) => {
+    if (path === '/api/reports/ai') {
+      return aiFails ? Promise.reject(new Error('La IA está desactivada.')) : Promise.resolve(aiAnswer);
+    }
     const scopeId = new URL(path, 'http://x').searchParams.get('scopeId') ?? '';
     return Promise.resolve(datasets[scopeId] ?? empty);
   });
   const get = jasmine.createSpy('get').and.callFake((path: string) => {
-    if (path === '/api/config') return Promise.resolve(normalizeConfig(config));
+    if (path === '/api/config') return Promise.resolve(normalizeConfig(effectiveConfig));
+    if (path === '/api/connection/status') return Promise.resolve({ tokenStored: true, aiKeyStored });
     if (path === '/api/jira/statuses') {
       return statusesFail
         ? Promise.reject(new Error('Jira caído'))
@@ -218,6 +227,102 @@ describe('SprintClosePage', () => {
       exportButton(el).click();
       await settle();
       expect(el.querySelector('[role="alert"]')?.textContent).toContain('Disco lleno');
+    });
+  });
+
+  describe('AI narrative', () => {
+    const button = (el: HTMLElement, selector: string) => el.querySelector<HTMLButtonElement>(selector);
+    const answer = (text: string) => ({ text, demo: false });
+    const good = JSON.stringify({ titulares: ['Se movió 1 ítem'], lectura: 'Sprint tranquilo.' });
+    const type = (el: HTMLElement, selector: string, value: string) => {
+      const field = el.querySelector<HTMLTextAreaElement>(selector)!;
+      field.value = value;
+      field.dispatchEvent(new Event('input'));
+    };
+
+    it('shows the button only when AI is enabled AND the key is stored', async () => {
+      for (const [aiEnabled, aiKeyStored, visible] of [
+        [false, false, false],
+        [true, false, false],
+        [false, true, false],
+        [true, true, true],
+      ] as const) {
+        TestBed.resetTestingModule();
+        const { el } = await render({ datasets, aiEnabled, aiKeyStored });
+        expect(!!button(el, 'button.ai-draft')).withContext(`${aiEnabled}/${aiKeyStored}`).toBe(visible);
+      }
+    });
+
+    it('asks for confirmation listing what is sent, and sends nothing until confirmed', async () => {
+      const { el, post, fixture, settle } = await render({ datasets, aiEnabled: true, aiKeyStored: true, aiAnswer: answer(good) });
+      button(el, 'button.ai-draft')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.ai-confirm')?.textContent).toContain('No se envían personas');
+      expect(el.querySelector('.ai-confirm')?.textContent).toContain('claves y títulos de ítems cerrados y bloqueados');
+      expect(post.calls.allArgs().some(([p]) => p === '/api/reports/ai')).toBeFalse();
+      button(el, 'button.ai-cancel')!.click();
+      fixture.detectChanges();
+      expect(el.querySelector('.ai-confirm')).toBeNull();
+      expect(post.calls.allArgs().some(([p]) => p === '/api/reports/ai')).toBeFalse();
+      button(el, 'button.ai-draft')!.click();
+      fixture.detectChanges();
+      button(el, 'button.ai-send')!.click();
+      await settle();
+      const call = post.calls.allArgs().find(([p]) => p === '/api/reports/ai')!;
+      const input = (call[1] as { input: Record<string, unknown> }).input;
+      expect(Object.keys(input)).toContain('kpis');
+      expect(JSON.stringify(input)).not.toContain('Ana');
+    });
+
+    it('shows editable headlines and reading, includes them in the preview and the export, and discards', async () => {
+      const saveHtml = jasmine.createSpy('saveHtml').and.resolveTo({ ok: true });
+      (window as { leadershipPanel?: unknown }).leadershipPanel = { saveHtml };
+      const { el, fixture, settle } = await render({ datasets, aiEnabled: true, aiKeyStored: true, aiAnswer: answer(good) });
+      button(el, 'button.ai-draft')!.click();
+      fixture.detectChanges();
+      button(el, 'button.ai-send')!.click();
+      await settle();
+      expect(el.querySelector<HTMLTextAreaElement>('.ai-headlines')!.value).toBe('Se movió 1 ítem');
+      expect(el.querySelector<HTMLTextAreaElement>('.ai-reading')!.value).toBe('Sprint tranquilo.');
+      expect(el.querySelector('.ai-warning')).toBeNull();
+      type(el, '.ai-reading', 'Lectura editada');
+      await settle();
+      expect(el.querySelector('iframe')!.srcdoc).toContain('Lectura editada');
+      expect(el.querySelector('iframe')!.srcdoc).toContain('Redactado con IA y revisado por el equipo');
+      button(el, 'button.export')!.click();
+      await settle();
+      expect(saveHtml.calls.mostRecent().args[1]).toContain('Lectura editada');
+      button(el, 'button.ai-discard')!.click();
+      await settle();
+      expect(el.querySelector('.ai-narrative')).toBeNull();
+      expect(el.querySelector('iframe')!.srcdoc).not.toContain('Lectura editada');
+    });
+
+    it('warns about numbers that are not in the report', async () => {
+      const bad = JSON.stringify({ titulares: ['Se cerraron 77 ítems'], lectura: 'Nada más.' });
+      const { el, fixture, settle } = await render({ datasets, aiEnabled: true, aiKeyStored: true, aiAnswer: answer(bad) });
+      button(el, 'button.ai-draft')!.click();
+      fixture.detectChanges();
+      button(el, 'button.ai-send')!.click();
+      await settle();
+      expect(el.querySelector('.ai-warning')?.textContent).toContain('77');
+    });
+
+    it('shows a readable message for an unusable answer and for a failed call', async () => {
+      const garbage = await render({ datasets, aiEnabled: true, aiKeyStored: true, aiAnswer: answer('no es json') });
+      button(garbage.el, 'button.ai-draft')!.click();
+      garbage.fixture.detectChanges();
+      button(garbage.el, 'button.ai-send')!.click();
+      await garbage.settle();
+      expect(garbage.el.querySelector('.ai-error')?.textContent).toContain('no se pudo leer');
+      expect(garbage.el.querySelector('.ai-narrative')).toBeNull();
+      TestBed.resetTestingModule();
+      const failing = await render({ datasets, aiEnabled: true, aiKeyStored: true, aiFails: true });
+      button(failing.el, 'button.ai-draft')!.click();
+      failing.fixture.detectChanges();
+      button(failing.el, 'button.ai-send')!.click();
+      await failing.settle();
+      expect(failing.el.querySelector('.ai-error')?.textContent).toContain('desactivada');
     });
   });
 });

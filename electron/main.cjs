@@ -70,6 +70,10 @@ const getJiraBaseUrl = () => jiraEndpoint.getJiraBaseUrl();
 let demoHosts = null;
 const getAllowedHosts = () => demoHosts ?? jiraEndpoint.getAllowedHosts();
 
+// Demo secrets store no AI key; the demo narrative never calls a provider, so a dummy value only
+// lets the "Redactar con IA" flow be exercised offline.
+const withDemoAiKey = (secrets) => ({ ...secrets, getAiKey: () => 'demo-ai-key' });
+
 const DB_FILE_NAME = 'leadership-panel.db';
 
 // Dev and packaged databases live in different places on purpose: `.cache/` in the repo for
@@ -128,6 +132,8 @@ async function startProxy(secrets, demo) {
     loadConfig: () => configStore.load(),
     saveConfig: (next) => configStore.save(next),
   });
+  // Demo: the AI narrative is canned (no provider call, works offline).
+  const aiDemo = demo ? (await load('ai/demo-narrative.mjs')).demoNarrative : undefined;
   const port = await findAvailablePort(PROXY_PORT_RANGE_START);
   proxyServer = await startProxyServer({
     port,
@@ -141,6 +147,7 @@ async function startProxy(secrets, demo) {
     sync,
     fetch: guardedFetch,
     jira,
+    aiDemo,
   });
 }
 
@@ -239,12 +246,14 @@ app.whenReady().then(async () => {
       ? await import(pathToFileURL(path.join(__dirname, '..', 'fixtures', 'demo', 'index.mjs')).toString())
       : null;
     const secrets = demo
-      ? createDemoSecrets({
-          safeStorage,
-          fs,
-          dir: path.join(app.getPath('userData'), 'demo'),
-          jiraToken: demo.DEMO_TOKEN,
-        })
+      ? withDemoAiKey(
+          createDemoSecrets({
+            safeStorage,
+            fs,
+            dir: path.join(app.getPath('userData'), 'demo'),
+            jiraToken: demo.DEMO_TOKEN,
+          }),
+        )
       : createSecrets({
           safeStorage,
           fs,
