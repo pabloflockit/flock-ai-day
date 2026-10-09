@@ -210,10 +210,7 @@ Key ones (full log with rationale: [`docs/decisions.md`](docs/decisions.md)):
 - **Scope is per epic.** Work outside the registered epics is not seen (only team members' work
   inside them is classified as in-team or "Fuera del equipo").
 - **Business days are Monday–Friday, without holidays.**
-- **Figures not yet hand-verified against Jira for one epic** (open item in `docs/decisions.md`).
-  `tools/validate-scope.mjs` checks the scope; a per-epic metric comparison would close it.
-- **Windows only**, and **no installer or packaging** yet: it runs from the repository with
-  `npm run desktop`.
+- **Windows only.**
 - Only the last status change of an issue is kept (no full transition history).
 - No AI drafting yet; reports are generated from templates and metrics.
 - UI copy is Spanish only.
