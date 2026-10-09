@@ -215,7 +215,13 @@ async function refreshTarget({ db, client, config, target, mode = 'delta', now }
     fullFetchedAt,
     payloadVersion,
   });
-  return { rows, fetchedAt: nowIso, isCurrent, shardsMeta };
+  // Method that returned children per successful epic (`auto` detection), for the §6.7 sync.
+  /** @type {Record<string, 'parent' | 'epic_link' | null>} */
+  const linkMethods = {};
+  for (const shard of shards) {
+    if (shard.status === 'ok') linkMethods[shard.key] = shard.linkMethodUsed ?? null;
+  }
+  return { rows, fetchedAt: nowIso, isCurrent, shardsMeta, linkMethods };
 }
 
 /**

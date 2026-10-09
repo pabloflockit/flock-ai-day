@@ -29,6 +29,8 @@ export function buildDemoConfig() {
         members: [
           { accountId: 'demo-account-001', displayName: 'Ana Demo', emailAddress: 'ana.demo@example.com' },
           { accountId: 'demo-account-002', displayName: 'Ben Demo', emailAddress: 'ben.demo@example.com' },
+          // Not in the demo Jira users: a sync flags it `jiraActive: false` and keeps it (architecture section 6.7).
+          { accountId: 'demo-account-099', displayName: 'Former Demo', emailAddress: null },
         ],
       },
     ],

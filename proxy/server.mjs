@@ -9,6 +9,7 @@ import { registerConnectionRoutes } from './routes/connection.mjs';
 import { registerJiraMetaRoutes } from './routes/jira-meta.mjs';
 import { registerDatasetRoutes } from './routes/datasets.mjs';
 import { registerStorageRoutes } from './routes/storage.mjs';
+import { registerSyncRoutes } from './routes/sync.mjs';
 import { createVerifiedOrigins } from './config/verified-origins.mjs';
 import { createSecretGuard } from './security/session-secret.mjs';
 import { evaluateCors } from './security/cors.mjs';
@@ -109,6 +110,7 @@ function readPackageVersion() {
  *  - `deps.jira`: the whitelisted Jira client (built over the guarded fetch); routes answer 503 without it.
  *  - `deps.stores`: `{ config, datasets }`: the config store and the project-issues service, both over the encrypted SQLite cache.
  *  - `deps.storage`: `{ handle }`, the database handle behind `POST /api/storage/reset`.
+ *  - `deps.sync`: the sync service behind `POST /api/sync` and `GET /api/sync/status` (503 without it).
  *  - `deps.verifiedOrigins`: Cloud-verified origins required by `PUT /api/config` (default: a fresh in-memory registry).
  *  - `deps.guards`: extra request guards run after the secret check. A guard returns `null` to continue, or a `{ status, body }` result to short-circuit.
  *  - `deps.registerRoutes`: extra route modules from `proxy/routes/`.
@@ -124,6 +126,7 @@ export function createProxyServer(deps) {
     jira: deps.jira,
     stores: deps.stores ?? {},
     storage: deps.storage,
+    sync: deps.sync,
     // Per process: what `/api/connection/verify` proved is Cloud, consulted by `PUT /api/config`.
     verifiedOrigins: deps.verifiedOrigins ?? createVerifiedOrigins(),
   };
@@ -137,6 +140,7 @@ export function createProxyServer(deps) {
   registerJiraMetaRoutes(router);
   registerDatasetRoutes(router);
   registerStorageRoutes(router);
+  registerSyncRoutes(router);
   for (const register of deps.registerRoutes ?? []) register(router);
 
   /**

@@ -96,6 +96,7 @@ async function startProxy(secrets, demo) {
   const { createJiraEndpoint } = await load('config/jira-endpoint.mjs');
   const { createJiraClient } = await load('jira/client.mjs');
   const { createProjectIssuesService } = await load('jira/refresh.mjs');
+  const { createSyncService } = await load('sync/service.mjs');
   // The database opens without the key; a key that cannot decrypt it surfaces lazily as
   // DATA_KEY_INVALID on the config/dataset routes (and nothing is overwritten).
   const handle = openDatabase({ path: getDbPath() });
@@ -120,6 +121,13 @@ async function startProxy(secrets, demo) {
     client: jira,
     getConfig: () => configStore.load(),
   });
+  // Sync (architecture section 6.7): refreshes active projects, then merges member / epic fields into the latest config.
+  const sync = createSyncService({
+    client: jira,
+    refreshProject: (projectId, mode) => datasets.refresh(projectId, mode),
+    loadConfig: () => configStore.load(),
+    saveConfig: (next) => configStore.save(next),
+  });
   const port = await findAvailablePort(PROXY_PORT_RANGE_START);
   proxyServer = await startProxyServer({
     port,
@@ -130,6 +138,7 @@ async function startProxy(secrets, demo) {
     secrets,
     stores: { config: configStore, datasets },
     storage: { handle },
+    sync,
     fetch: guardedFetch,
     jira,
   });
