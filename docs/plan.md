@@ -107,7 +107,9 @@ Siguiendo `architecture.md` §8.3, el dataset de un proyecto (`source: 'projectI
 - Campos de medición del proyecto.
 - `epicLinkMode` y `epicLinkFieldId`.
 
-**No** mueven claves: integrantes de equipos, nombres, descripciones, filtros de vista, campos mantenidos por la sincronización y **overrides de categoría de estado**. Los overrides se aplican en el dominio (`effectiveCategory`, `architecture.md` §6.3), así que editarlos recalcula el dashboard sin volver a pedir datos.
+El dataset del informe de cierre (`source: 'memberIssues'`, `scopeId: team:<id>`) se identifica por los ids de los integrantes **activos** (ordenados), la fecha de inicio del período (`since`), `epicLinkMode` y `epicLinkFieldId`: acá los integrantes **sí** mueven la clave porque son la consulta.
+
+**No** mueven claves de `projectIssues`: integrantes de equipos, nombres, descripciones, filtros de vista, campos mantenidos por la sincronización y **overrides de categoría de estado**. Los overrides se aplican en el dominio (`effectiveCategory`, `architecture.md` §6.3), así que editarlos recalcula el dashboard sin volver a pedir datos.
 
 ---
 

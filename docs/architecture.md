@@ -351,11 +351,14 @@ GET  /api/jira/epics?query=         # búsqueda por texto (flujo 2, fase P1)
 GET  /api/datasets/:source?scopeId=           # { rows, fetchedAt, isCurrent, shardsMeta }
 GET  /api/datasets/:source/meta?scopeId=      # { fetchedAt, isCurrent, shardsMeta } — sin rows (administración)
 POST /api/datasets/:source/refresh?scopeId=&mode=delta|full
+                                     # `memberIssues` (informe de cierre): scopeId = id de equipo y `since=AAAA-MM-DD` obligatorio
 POST /api/sync                       # refresca todos los proyectos activos + campos de §6.7
 GET  /api/sync/status                # progreso para polling
 
 POST /api/reports/ai                 # solo si está habilitado; recibe métricas agregadas, devuelve texto (plan.md §8.2)
 ```
+
+**Fuente `memberIssues` (informe de cierre).** El trabajo propio de los integrantes activos de un equipo desde el inicio del período: `assignee in (<integrantes>) AND updated >= "<since>"` con changelog (lotes de 50 integrantes). La épica sale del padre; una subtarea toma la de su padre, y si el padre no vino en el resultado se busca con `key in (...)` (sin changelog). El dataset es **todo** el trabajo de los integrantes: el modelo del informe separa lo que cae fuera de las épicas del equipo. Un solo shard (`members`) con delta, degradación y coalescencia iguales a `projectIssues`. Equipo inexistente o inactivo → 404; `since` ausente o inválido → 400 `VALIDATION_ERROR`. Se cuenta por el responsable **actual** de la issue.
 
 `PUT /api/config` devuelve la lista de claves de cache que **cambiaron** por la edición, para que el front precaliente solo esas.
 

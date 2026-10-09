@@ -111,6 +111,28 @@ export function projectIssuesParams(project, config) {
 }
 
 /**
+ * Query-changing parameters of a team's `memberIssues` dataset (sprint report): the ACTIVE
+ * members' account ids (sorted), the period start and the `jira` link config (it decides which
+ * fields are requested and how epics are resolved). Unlike `projectIssues`, members are part of
+ * the key here because they ARE the query (`assignee in (...)`). Names stay out.
+ *
+ * @param {import('../proxy/config/normalize.mjs').Team} team
+ * @param {string} since `YYYY-MM-DD`
+ * @param {import('../proxy/config/normalize.mjs').AppConfig} config
+ */
+export function memberIssuesParams(team, since, config) {
+  return {
+    accountIds: team.members
+      .filter((member) => member.active)
+      .map((member) => member.accountId)
+      .sort(),
+    since,
+    epicLinkMode: config.jira.epicLinkMode,
+    epicLinkFieldId: config.jira.epicLinkFieldId,
+  };
+}
+
+/**
  * In-memory project that stands for a single epic (diagnostics `epicIssues` source). It is never
  * stored in the configuration.
  * @param {string} epicKey

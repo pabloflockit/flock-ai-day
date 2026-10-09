@@ -40,8 +40,12 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
       search fields, projection, payload version bump, demo fixtures, tests.
 - [x] 2. Component -> layer mapping: read-only `GET /api/jira/projects/:key/components` route, mapping per Jira
       project key + component id in the config (`normalizeConfig`, `validateConfig`), picker screen.
-- [ ] 3. Outside-the-epics dataset: read-only query for the team members' issues with movement in the period that
-      are not under the team's epics (separate section).
+- [x] 3. Outside-the-epics dataset: read-only query for the team members' issues with movement in the period that
+      are not under the team's epics (separate section). Design: source `memberIssues`, scope = team
+      (`{ type: 'team', id }`), required `since=YYYY-MM-DD`; JQL `assignee in (<active member ids>) AND updated >=
+      "<since>"` with changelog; epic resolved from the parent (subtasks via their parent, missing parents fetched
+      with a batched `key in (...)`); the dataset is ALL member work, the report model (task 4) leaves out the team's
+      active epics like `scope.mjs`; one shard, delta + degradation like `projectIssues`; demo answers the new JQL.
 - [ ] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
       hygiene notes, outside-epics section (test-first).
 - [ ] 5. HTML template with the Flock design tokens, date-range picker, preview, `saveHtml` bridge (validated in main).
@@ -79,3 +83,12 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   `docs/architecture.md` updated. RED observed for the node tests. Two verifier runs failed with an internal subagent
   error; suites run by the parent: node 488/488, Karma 175/175, `build:desktop` OK.
   Commit: `feat(config): map Jira components to report layers`.
+- Task 3 (parent, inline: every subagent run, even a one-word probe, failed with "assistant reported an error" and
+  0 tool calls): source `memberIssues` = `proxy/jira/member-issues.mjs` (`fetchMemberIssues`, batches of 50 ids,
+  parent lookup with `key in`), `refreshMemberIssues` + `readMembers`/`refreshMembers` in `proxy/jira/refresh.mjs`
+  (one `members` shard), `memberIssuesParams` in `shared/cache-key.mjs`, `isIsoDate` in `shared/contracts.mjs`, routes
+  with required `since`. Demo: parser accepts `assignee in`, `updated >= "YYYY-MM-DD"`, `key in`; new fictional
+  DEMO-25 (unconfigured epic) with DEMO-26 (non-member parent), DEMO-27 (member subtask, needs the parent lookup) and
+  DEMO-28 (no epic). Docs: `docs/architecture.md` §7, `docs/plan.md` §2.3. RED observed (missing module, route 400s,
+  demo clauses). node 503/503, `build:desktop` OK; Karma not run (no front change).
+  Membership is by CURRENT assignee (an issue reassigned away from a member is not in the dataset).

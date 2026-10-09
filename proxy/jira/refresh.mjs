@@ -1,7 +1,14 @@
-import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN } from '../../shared/contracts.mjs';
-import { epicIssuesParams, epicProject, projectIssuesParams, resolveTarget } from '../../shared/cache-key.mjs';
+import { ApiError, ERROR_CODES, ISSUE_KEY_PATTERN, isIsoDate } from '../../shared/contracts.mjs';
+import {
+  epicIssuesParams,
+  epicProject,
+  memberIssuesParams,
+  projectIssuesParams,
+  resolveTarget,
+} from '../../shared/cache-key.mjs';
 import { PAYLOAD_VERSION, needsFullRefresh, readDataset, writeDataset } from '../cache/datasets.mjs';
 import { fetchProjectIssues } from './hierarchy.mjs';
+import { fetchMemberIssues } from './member-issues.mjs';
 
 /**
  * Incremental refresh of a project's `projectIssues` dataset (architecture §6.5, §6.6).
@@ -16,6 +23,10 @@ import { fetchProjectIssues } from './hierarchy.mjs';
 export const SOURCE = 'projectIssues';
 /** Diagnostics source: the rows of one epic, from a synthetic in-memory project (never in the config). */
 export const EPIC_SOURCE = 'epicIssues';
+/** Sprint report source: a team's members' own work since a period start (scopeId = `team:<id>`). */
+export const MEMBER_SOURCE = 'memberIssues';
+/** The single shard of a `memberIssues` dataset. */
+const MEMBER_SHARD = 'members';
 /** Extra minutes added to the time since the last successful fetch of an epic. */
 export const DELTA_SAFETY_MARGIN_MINUTES = 5;
 const MS_PER_MINUTE = 60_000;
@@ -52,6 +63,28 @@ function resolveEpic(config, epicKey) {
     epicIssuesParams(epicKey, config),
   );
   return { project: epicProject(epicKey), id: { scopeId, source: EPIC_SOURCE, paramsKey }, cacheKey };
+}
+
+/**
+ * Cache identity of a team's `memberIssues` dataset for a period start.
+ * @param {import('../config/normalize.mjs').AppConfig} config
+ * @param {string} teamId
+ * @param {unknown} since
+ */
+function resolveTeam(config, teamId, since) {
+  const team = config.teams.find((t) => t.id === teamId && t.active);
+  if (!team) {
+    throw new ApiError(404, ERROR_CODES.NOT_FOUND, 'El equipo no existe o está inactivo.');
+  }
+  if (!isIsoDate(since)) {
+    throw new ApiError(400, ERROR_CODES.VALIDATION_ERROR, 'La fecha de inicio debe tener el formato AAAA-MM-DD.');
+  }
+  const { scopeId, paramsKey, cacheKey } = resolveTarget(
+    { type: 'team', id: team.id },
+    MEMBER_SOURCE,
+    memberIssuesParams(team, since, config),
+  );
+  return { team, since, id: { scopeId, source: MEMBER_SOURCE, paramsKey }, cacheKey };
 }
 
 /** @param {{ rows: any[], fetchedAt: string | null, isCurrent: boolean, shardsMeta: any[] }} view */
@@ -225,6 +258,72 @@ async function refreshTarget({ db, client, config, target, mode = 'delta', now }
 }
 
 /**
+ * Refreshes a team's `memberIssues` dataset (one shard, `members`) and returns the stored view.
+ * Same rules as a project, with one shard: full on `mode = 'full'`, `needsFullRefresh` or no
+ * previous success (a full load replaces the rows); otherwise a delta since that success plus the
+ * margin, merged by key. A failure keeps the cached rows, marks the shard `failed` and the dataset
+ * not current. The rows are ALL the members' work: the report model leaves out the team's epics.
+ *
+ * @param {Omit<Parameters<typeof refreshProjectIssues>[0], 'projectId'> & { teamId: string, since: string }} options
+ */
+export async function refreshMemberIssues({ db, client, config, teamId, since, mode = 'delta', now }) {
+  return refreshMembersTarget({ db, client, config, target: resolveTeam(config, teamId, since), mode, now });
+}
+
+/**
+ * @param {Omit<Parameters<typeof refreshProjectIssues>[0], 'projectId'> & { target: ReturnType<typeof resolveTeam> }} options
+ */
+async function refreshMembersTarget({ db, client, config, target, mode = 'delta', now }) {
+  const nowIso = typeof now === 'function' ? now() : (now ?? db.handle.now());
+  const { team, since, id } = target;
+  const entry = readDataset(db, id);
+  const previous = (entry?.shardsMeta ?? []).find((meta) => meta.key === MEMBER_SHARD);
+  const lastOkMs = Date.parse(previous?.lastOkAt ?? '');
+  const full =
+    mode === 'full' ||
+    Number.isNaN(lastOkMs) ||
+    needsFullRefresh(entry, { now: nowIso, fullRefreshMaxAgeHours: config.settings.fullRefreshMaxAgeHours });
+  const sinceMinutes = full
+    ? null
+    : Math.max(0, Math.ceil((Date.parse(nowIso) - lastOkMs) / MS_PER_MINUTE)) + DELTA_SAFETY_MARGIN_MINUTES;
+
+  const accountIds = team.members.filter((member) => member.active).map((member) => member.accountId);
+  const result = await fetchMemberIssues({ client, accountIds, since, config, sinceMinutes });
+  const ok = result.status === 'ok';
+
+  /** @type {Map<string, any>} */
+  const merged = new Map();
+  if (!(ok && full)) for (const row of entry?.rows ?? []) merged.set(row.key, row);
+  if (ok) for (const row of result.rows) merged.set(row.key, row);
+  reresolveEpicKeys(merged);
+
+  const shardsMeta = [
+    ok
+      ? { key: MEMBER_SHARD, status: /** @type {const} */ ('ok'), lastOkAt: nowIso }
+      : {
+          key: MEMBER_SHARD,
+          status: /** @type {const} */ ('failed'),
+          lastOkAt: previous?.lastOkAt ?? null,
+          errorCode: result.errorCode ?? ERROR_CODES.UNKNOWN,
+        },
+  ];
+  // Old-shape rows carried through a failure keep their payload version, so the next run is full.
+  const carriedOldShape = !ok && entry !== null && entry.payloadVersion !== PAYLOAD_VERSION && merged.size > 0;
+  const fullFetchedAt = ok && full ? nowIso : (entry?.fullFetchedAt ?? nowIso);
+  const rows = [...merged.values()];
+  writeDataset(db, {
+    ...id,
+    rows,
+    isCurrent: ok,
+    shardsMeta,
+    fetchedAt: nowIso,
+    fullFetchedAt,
+    payloadVersion: carriedOldShape ? entry.payloadVersion : PAYLOAD_VERSION,
+  });
+  return { rows, fetchedAt: nowIso, isCurrent: ok, shardsMeta };
+}
+
+/**
  * Read and refresh entry points for the routes. Refreshes of the same cache key are coalesced:
  * while one is in flight, an equal-or-weaker request (a delta, or anything while a full runs)
  * receives the same promise; a stronger request (full during a delta) runs right after it.
@@ -301,6 +400,28 @@ export function createProjectIssuesService({ db, client, getConfig, now = () => 
       const target = resolveEpic(getConfig(), epicKey);
       return refreshCoalesced(target, mode, (config, m, nowIso) =>
         refreshEpicIssues({ db, client, config, epicKey, mode: m, now: nowIso }),
+      );
+    },
+
+    /**
+     * Sprint report source `memberIssues`: a team's members' work since `since` (`YYYY-MM-DD`).
+     * Unknown/inactive team -> 404; invalid `since` -> 400.
+     * @param {string} teamId
+     * @param {unknown} since
+     */
+    readMembers(teamId, since) {
+      return readTarget(resolveTeam(getConfig(), teamId, since));
+    },
+
+    /**
+     * @param {string} teamId
+     * @param {unknown} since
+     * @param {'delta' | 'full'} [mode]
+     */
+    refreshMembers(teamId, since, mode = 'delta') {
+      const target = resolveTeam(getConfig(), teamId, since);
+      return refreshCoalesced(target, mode, (config, m, nowIso) =>
+        refreshMemberIssues({ db, client, config, teamId, since: target.since, mode: m, now: nowIso }),
       );
     },
   };

@@ -256,3 +256,36 @@ test('demo issues expose fictional layer components and the project components l
   assert.equal(done.statusChanges.at(-1).toStatusId, '4');
   assert.equal(done.statusChanges.at(-1).at, done.doneAt);
 });
+
+test('search: assignee in, absolute updated date and key in (sprint report member query)', async () => {
+  const f = createDemoFetch({ now: () => NOW });
+  const mine = await (
+    await search(f, { jql: 'assignee in ("demo-account-001") AND updated >= "2026-10-01"', fields: ['assignee', 'updated'] })
+  ).json();
+  assert.ok(mine.issues.length > 0);
+  assert.ok(mine.issues.every((i) => i.fields.assignee.accountId === 'demo-account-001'));
+  assert.ok(mine.issues.every((i) => Date.parse(i.fields.updated.replace(/(\d{2})(\d{2})$/, '$1:$2')) >= Date.parse('2026-10-01T00:00:00Z')));
+  const none = await (await search(f, { jql: 'assignee in ("nobody") AND updated >= "2026-01-01"', fields: ['summary'] })).json();
+  assert.deepEqual(none.issues, []);
+  const keys = await (await search(f, { jql: 'key in ("DEMO-4","DEMO-6")', fields: ['parent'] })).json();
+  assert.deepEqual(keys.issues.map((i) => i.key), ['DEMO-4', 'DEMO-6']);
+  assert.equal((await search(f, { jql: 'updated >= "2026-02-30"', fields: ['summary'] })).status, 400);
+});
+
+test('demo has member work outside the configured epics, resolved by fetchMemberIssues', async () => {
+  const { fetchMemberIssues } = await import('../proxy/jira/member-issues.mjs');
+  const config = buildDemoConfig();
+  const out = await fetchMemberIssues({
+    client: clientFor(createDemoFetch({ now: () => NOW })),
+    accountIds: ['demo-account-001', 'demo-account-002'],
+    since: '2026-10-01',
+    config,
+    sinceMinutes: null,
+  });
+  assert.equal(out.status, 'ok');
+  const configured = new Set(config.projects.flatMap((p) => p.epics.map((e) => e.key)));
+  const outside = out.rows.filter((r) => !configured.has(r.epicKey));
+  assert.ok(outside.some((r) => r.epicKey === 'DEMO-25' && r.isSubtask), JSON.stringify(outside.map((r) => [r.key, r.epicKey])));
+  assert.ok(outside.some((r) => r.epicKey === null));
+  assert.ok(outside.every((r) => r.statusChanges.length > 0));
+});

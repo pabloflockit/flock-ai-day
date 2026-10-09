@@ -1,7 +1,10 @@
 import { ApiError, ERROR_CODES } from '../../shared/contracts.mjs';
 
-/** Dataset sources the routes serve. `epicIssues` (scopeId = epic key) feeds the diagnostics page. */
-const SOURCES = new Set(['projectIssues', 'epicIssues']);
+/**
+ * Dataset sources the routes serve. `epicIssues` (scopeId = epic key) feeds the diagnostics page;
+ * `memberIssues` (scopeId = team id, plus a required `since=YYYY-MM-DD`) feeds the sprint report.
+ */
+const SOURCES = new Set(['projectIssues', 'epicIssues', 'memberIssues']);
 const MODES = new Set(['delta', 'full']);
 
 /** @param {any} deps */
@@ -30,9 +33,23 @@ function requireScopeId(query) {
 }
 
 /**
+ * Reads one source's stored view. `since` is validated by the service (`memberIssues` only).
+ * @param {any} service
+ * @param {string} source
+ * @param {string} scopeId
+ * @param {URLSearchParams} query
+ */
+function readSource(service, source, scopeId, query) {
+  if (source === 'epicIssues') return service.readEpic(scopeId);
+  if (source === 'memberIssues') return service.readMembers(scopeId, query.get('since') ?? '');
+  return service.read(scopeId);
+}
+
+/**
  * `GET  /api/datasets/:source?scopeId=`                      -> `{ rows, fetchedAt, isCurrent, shardsMeta }`
  * `GET  /api/datasets/:source/meta?scopeId=`                 -> the same without `rows` (admin screens).
  * `POST /api/datasets/:source/refresh?scopeId=&mode=delta|full` -> same shape, after refreshing.
+ * `memberIssues` also needs `since=YYYY-MM-DD` on the three routes (missing/invalid -> 400).
  *
  * Never fetched: 200 with `rows: []` and `fetchedAt: null` (not an error: the front hydrates and
  * then refreshes). Unknown source or project -> 404 `NOT_FOUND`; `DATA_KEY_INVALID` is 409.
@@ -43,16 +60,13 @@ export function registerDatasetRoutes(router) {
   router.add('GET', '/api/datasets/:source', ({ params, query, deps }) => {
     requireSource(params?.source);
     const scopeId = requireScopeId(query);
-    const service = requireDatasets(deps);
-    return params.source === 'epicIssues' ? service.readEpic(scopeId) : service.read(scopeId);
+    return readSource(requireDatasets(deps), params.source, scopeId, query);
   });
 
   router.add('GET', '/api/datasets/:source/meta', ({ params, query, deps }) => {
     requireSource(params?.source);
     const scopeId = requireScopeId(query);
-    const service = requireDatasets(deps);
-    const { fetchedAt, isCurrent, shardsMeta } =
-      params.source === 'epicIssues' ? service.readEpic(scopeId) : service.read(scopeId);
+    const { fetchedAt, isCurrent, shardsMeta } = readSource(requireDatasets(deps), params.source, scopeId, query);
     return { fetchedAt, isCurrent, shardsMeta };
   });
 
@@ -65,8 +79,8 @@ export function registerDatasetRoutes(router) {
     }
     const service = requireDatasets(deps);
     const refreshMode = /** @type {'delta' | 'full'} */ (mode);
-    return params.source === 'epicIssues'
-      ? service.refreshEpic(scopeId, refreshMode)
-      : service.refresh(scopeId, refreshMode);
+    if (params.source === 'epicIssues') return service.refreshEpic(scopeId, refreshMode);
+    if (params.source === 'memberIssues') return service.refreshMembers(scopeId, query.get('since') ?? '', refreshMode);
+    return service.refresh(scopeId, refreshMode);
   });
 }

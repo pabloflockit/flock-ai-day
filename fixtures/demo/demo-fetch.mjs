@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { isIsoDate } from '../../shared/contracts.mjs';
 import { DEMO_BASE_URL, DEMO_HOST, EPIC_LINK_FIELD_ID } from './constants.mjs';
 import { DEMO_COMPONENTS, DEMO_PROJECT_ID, FAILING_EPICS, buildIssues } from './issues.mjs';
 
@@ -12,7 +13,8 @@ import { DEMO_COMPONENTS, DEMO_PROJECT_ID, FAILING_EPICS, buildIssues } from './
  * with AND:
  *  - `parent = "K"` and `parent in ("A","B")`
  *  - `cf[10014] = "K"` and `cf[10014] in ("A","B")` (the legacy Epic Link field)
- *  - `updated >= "-Nm"` (relative to the injected clock)
+ *  - `updated >= "-Nm"` (relative to the injected clock) and `updated >= "YYYY-MM-DD"` (UTC day start)
+ *  - `assignee in ("id1","id2")` and `key in ("A-1","B-2")` (sprint report member query)
  *  - `statusCategory = "In Progress"` / `!= "Done"` (quotes optional)
  * Anything else is a 400, like Jira rejecting a query. A search that names an epic listed in
  * `failingEpics` is a 400 too: that is how the demo shows the stale-not-empty degradation.
@@ -30,6 +32,9 @@ const CLAUSES = {
   linkEq: new RegExp(`^cf\\[(\\d+)\\]\\s*=\\s*${QUOTED}$`),
   linkIn: /^cf\[(\d+)\]\s+in\s*\((.*)\)$/s,
   updated: /^updated\s*>=\s*"-(\d+)m"$/,
+  updatedDate: /^updated\s*>=\s*"(\d{4}-\d{2}-\d{2})"$/,
+  assigneeIn: /^assignee\s+in\s*\((.*)\)$/s,
+  keyIn: /^key\s+in\s*\((.*)\)$/s,
   category: /^statusCategory\s*(=|!=)\s*(?:"([^"]*)"|(\S+))$/,
 };
 
@@ -96,6 +101,16 @@ function parseJql(jql, { now }) {
     } else if ((m = CLAUSES.updated.exec(clause))) {
       const since = now - Number(m[1]) * 60_000;
       tests.push((i) => Date.parse(i.fields.updated.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')) >= since);
+    } else if ((m = CLAUSES.updatedDate.exec(clause))) {
+      if (!isIsoDate(m[1])) throw new BadQuery('Invalid date.');
+      const since = Date.parse(`${m[1]}T00:00:00.000Z`);
+      tests.push((i) => Date.parse(i.fields.updated.replace(/([+-]\d{2})(\d{2})$/, '$1:$2')) >= since);
+    } else if ((m = CLAUSES.assigneeIn.exec(clause))) {
+      const ids = parseList(m[1]);
+      tests.push((i) => ids.includes(i.fields.assignee?.accountId));
+    } else if ((m = CLAUSES.keyIn.exec(clause))) {
+      const keys = parseList(m[1]);
+      tests.push((i) => keys.includes(i.key));
     } else if ((m = CLAUSES.category.exec(clause))) {
       const category = CATEGORY_BY_NAME[(m[2] ?? m[3]).toLowerCase()];
       if (!category) throw new BadQuery('Unknown status category.');

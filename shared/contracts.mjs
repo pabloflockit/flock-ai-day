@@ -17,6 +17,17 @@ export const ISSUE_KEY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*-\d+$/;
 /** Shape of a Jira project key (upper-case; the prefix of an issue key). */
 export const JIRA_PROJECT_KEY_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 
+/**
+ * A `YYYY-MM-DD` string that is a real calendar date (no `2026-02-30`). Safe to embed in JQL.
+ * @param {unknown} value
+ * @returns {value is string}
+ */
+export function isIsoDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
 /** The report layers a Jira component can be mapped to. */
 export const COMPONENT_LAYERS = Object.freeze(['frontend', 'backend', 'functional']);
 

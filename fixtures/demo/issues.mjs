@@ -5,7 +5,8 @@ import { DEMO_BASE_URL, EPIC_LINK_FIELD_ID, STORY_POINTS_FIELD_ID } from './cons
  * keys, summaries and people. Full recorded and anonymized fixtures belong to flow 2.
  *
  * Layout: DEMO-1 and DEMO-2 are healthy epics; DEMO-3 is the epic whose searches answer 400
- * (see `FAILING_EPICS`), used to show the stale-not-empty degradation.
+ * (see `FAILING_EPICS`), used to show the stale-not-empty degradation. DEMO-25 (not configured)
+ * and DEMO-28 (no epic) are member work outside the team's epics.
  *
  * Status ids: 1 To Do, 2 In Progress, 3 In Review, 4 Done, 5 Blocked.
  * Type ids: 10000 Epic, 10001 Story, 10002 Task, 10003 Bug, 10004 Sub-task, 10005/10006 Improvement.
@@ -93,6 +94,14 @@ const TABLE = [
   { key: 'DEMO-21', type: 10002, summary: 'Demo: inventory of old records', status: 4, created: '2026-09-06T09:00', parent: 'DEMO-3', epic: 'DEMO-3', who: 'ana', sp: 3, moves: [['2026-09-07T09:00', 1, 2], ['2026-09-09T09:00', 2, 4]] },
   { key: 'DEMO-22', type: 10002, summary: 'Demo: map old fields', status: 2, created: '2026-09-06T10:00', parent: 'DEMO-3', epic: 'DEMO-3', who: 'ben', sp: 5, moves: [['2026-09-10T09:00', 1, 2]] },
   { key: 'DEMO-23', type: 10001, summary: 'Demo: dry run report', status: 1, created: '2026-09-06T11:00', parent: 'DEMO-3', epic: 'DEMO-3', sp: null },
+
+  // DEMO-25: an epic of another team (not in the demo config). The members' work under it, and
+  // DEMO-28 without any epic, is the sprint report's "outside the team's epics" section. DEMO-26
+  // belongs to a non-member, so its subtask's epic needs the parent lookup.
+  { key: 'DEMO-25', type: 10000, summary: 'Demo: support rotation', status: 2, created: '2026-09-15T09:00', moves: [['2026-09-16T09:00', 1, 2]] },
+  { key: 'DEMO-26', type: 10001, summary: 'Demo: triage incoming tickets', status: 2, created: '2026-09-16T09:00', parent: 'DEMO-25', epic: 'DEMO-25', who: 'carla', sp: 2, moves: [['2026-09-28T09:00', 1, 2]] },
+  { key: 'DEMO-27', comps: [20002], type: 10004, summary: 'Demo: fix the export timeout', status: 4, created: '2026-10-01T09:00', parent: 'DEMO-26', who: 'ben', sp: null, moves: [['2026-10-02T09:00', 1, 2], ['2026-10-06T15:00', 2, 4]] },
+  { key: 'DEMO-28', type: 10002, summary: 'Demo: help the sales demo', status: 2, created: '2026-10-02T09:00', who: 'ana', sp: null, moves: [['2026-10-03T10:00', 1, 2]] },
 ];
 
 const COMPONENT_BY_ID = new Map(DEMO_COMPONENTS.map((c) => [c.id, c]));

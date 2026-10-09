@@ -151,3 +151,40 @@ test('GET /api/datasets/:source/meta answers the envelope without rows', async (
     assert.equal((await call('GET', '/api/datasets/nope/meta?scopeId=p1')).status, 404);
   });
 });
+
+test('memberIssues: scopeId is the team, since is required and validated', async () => {
+  const { configStore, db } = build();
+  configStore.save(
+    makeConfig({ overrides: { teams: [{ id: 't1', name: 'T', members: [{ accountId: 'acc-1', displayName: 'A' }] }] } }),
+  );
+  const client = fakeClient((jql) => {
+    if (!jql.startsWith('assignee in ("acc-1")')) return [];
+    const raw = issue('X-1', { parent: 'E-9' });
+    raw.fields.assignee = { accountId: 'acc-1', displayName: 'A' };
+    return [raw];
+  });
+  const datasets = createProjectIssuesService({ db, client, getConfig: () => configStore.load(), now: () => T0 });
+  await withProxy({ config: configStore, datasets }, async (call) => {
+    const base = '/api/datasets/memberIssues';
+    const before = await call('GET', `${base}?scopeId=t1&since=2026-02-16`);
+    assert.equal(before.status, 200);
+    assert.equal(before.body.data.fetchedAt, null);
+
+    const refreshed = await call('POST', `${base}/refresh?scopeId=t1&since=2026-02-16&mode=full`);
+    assert.equal(refreshed.status, 200);
+    assert.deepEqual(refreshed.body.data.rows.map((r) => [r.key, r.epicKey]), [['X-1', 'E-9']]);
+    assert.deepEqual(refreshed.body.data.shardsMeta, [{ key: 'members', status: 'ok', lastOkAt: T0 }]);
+
+    const meta = await call('GET', `${base}/meta?scopeId=t1&since=2026-02-16`);
+    assert.equal(meta.body.data.isCurrent, true);
+    assert.equal('rows' in meta.body.data, false);
+
+    for (const path of [`${base}?scopeId=t1`, `${base}?scopeId=t1&since=2026-02-30`, `${base}/meta?scopeId=t1&since=16-02-2026`]) {
+      const res = await call('GET', path);
+      assert.equal(res.status, 400, path);
+      assert.equal(res.body.error.code, 'VALIDATION_ERROR', path);
+    }
+    assert.equal((await call('POST', `${base}/refresh?scopeId=t1`)).status, 400);
+    assert.equal((await call('GET', `${base}?scopeId=missing&since=2026-02-16`)).status, 404);
+  });
+});
