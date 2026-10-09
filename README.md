@@ -47,7 +47,13 @@ the card says so instead of showing a misleading `0`.
 | ![Client report](docs/screenshots/report-client-dark.png) | ![Team](docs/screenshots/team-dark.png) |
 | ![Sync](docs/screenshots/sync-dark.png) | ![Connection](docs/screenshots/connection-dark.png) |
 
-Light theme: [`dashboard-light.png`](docs/screenshots/dashboard-light.png). The UI copy is in
+Sprint close (demo data): the page with its KPIs and preview, and the exported report's layer sections.
+
+| | |
+|---|---|
+| ![Sprint close](docs/screenshots/sprint-close-dark.png) | ![Sprint close layers](docs/screenshots/sprint-close-layers.png) |
+
+Light theme: [`dashboard-light.png`](docs/screenshots/dashboard-light.png), [`sprint-close-light.png`](docs/screenshots/sprint-close-light.png). The UI copy is in
 Spanish (es-AR); code identifiers and docs are in English.
 
 ## Getting started
