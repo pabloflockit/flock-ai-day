@@ -2,6 +2,7 @@
 // Only tokens through CSS variables; tokens.css is a verbatim skill copy.
 @use 'styles/flock/tokens';
 @use 'styles/flock/tokens-app';
+@use 'styles/components';
 
 *,
 *::before,

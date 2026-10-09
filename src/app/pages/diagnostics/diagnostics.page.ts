@@ -16,6 +16,7 @@ import { ProxyClient, ProxyError, TRANSPORT_ERROR } from '../../core/proxy-clien
 import { AppStore, EMPTY_DATASET, type StoreError } from '../../core/store/app-store';
 import { CalendarDatePipe } from '../../shared/pipes/calendar-date.pipe';
 import { InstantPipe } from '../../shared/pipes/instant.pipe';
+import { CATEGORY_STATE } from '../../shared/ui/state';
 
 /** State of one user-triggered call. */
 interface Op<T> {
@@ -135,6 +136,7 @@ export class DiagnosticsPage {
         row,
         categoryKey,
         category: categoryKey ? CATEGORY_LABEL[categoryKey] : '',
+        stateClass: categoryKey ? CATEGORY_STATE[categoryKey] : '',
         measures: Object.entries(row.measures),
       };
     });

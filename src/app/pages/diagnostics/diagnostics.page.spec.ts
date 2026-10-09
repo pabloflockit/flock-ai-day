@@ -92,7 +92,7 @@ describe('DiagnosticsPage', () => {
     expect(cells[6]).toBe('5/3/2026'); // calendar date: no timezone shift
     expect(cells[7]).toContain('customfield_1: 3');
     expect(cells[7]).toContain('customfield_2: —');
-    expect(el.querySelector('.badge')!.textContent).toContain('Desactualizado');
+    expect(el.querySelector('.status-chip.state-blocked')!.textContent).toContain('Desactualizado');
     expect(el.textContent).toContain('Última actualización:');
     expect(el.textContent).toContain('Falló la carga de la épica X-9');
     expect(el.textContent).toContain('código: TIMEOUT');

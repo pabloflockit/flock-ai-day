@@ -1,0 +1,458 @@
+// Shared components and patterns — Flock Design System v1.1 (docs/design/design-system.md §5–§7).
+// Element defaults (button = primary, label, input, select) live in styles.scss.
+
+// ---- App shell and dark brand sidebar (§7) -------------------------------------------------
+.app-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100vh;
+  padding: 0 var(--space-3) var(--space-4);
+  overflow-y: auto;
+  color: var(--on-brand);
+  background: var(--nav-gradient);
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-3)) var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  font-size: var(--fs-card-title);
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  background: var(--brand-gradient);
+}
+
+.sidebar-section {
+  margin: var(--space-3) var(--space-2) var(--space-1);
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  opacity: 0.6;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-btn);
+  font-weight: 600;
+  color: var(--on-brand);
+  text-decoration: none;
+  opacity: 0.78;
+  transition: background 0.15s, opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+    background: var(--on-brand-light);
+  }
+
+  &.active {
+    opacity: 1;
+    background: var(--on-brand-light-hover);
+  }
+}
+
+.app-main {
+  min-width: 0;
+  padding: var(--space-8) var(--space-8) var(--space-10);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+
+// ---- Button variants (§5); `button` itself is the primary variant -------------------------
+button.btn-ghost {
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+
+  &:hover:not(:disabled) {
+    background: var(--surface);
+  }
+}
+
+button.btn-accent {
+  background: var(--accent);
+
+  &:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+}
+
+button.btn-small {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--brand);
+  background: var(--brand-soft);
+
+  &:hover:not(:disabled) {
+    background: var(--brand-soft-hover);
+  }
+}
+
+button.btn-light {
+  color: var(--on-brand);
+  background: var(--on-brand-light);
+
+  &:hover:not(:disabled) {
+    background: var(--on-brand-light-hover);
+  }
+}
+
+button.btn-contrast {
+  color: var(--brand);
+  background: var(--panel);
+
+  &:hover:not(:disabled) {
+    background: var(--brand-soft);
+  }
+}
+
+button.btn-icon {
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: var(--radius-icon);
+  color: var(--text-faint);
+  background: transparent;
+
+  &:hover:not(:disabled) {
+    color: var(--brand);
+    background: var(--brand-soft);
+  }
+}
+
+// ---- Form fields (§5) ---------------------------------------------------------------------
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-hint {
+  font-size: var(--fs-secondary);
+  font-weight: 500;
+  color: var(--text-soft);
+}
+
+.field-error {
+  font-size: var(--fs-secondary);
+  font-weight: 500;
+  color: var(--state-blocked-fg);
+}
+
+// ---- Chips and badges (§5); state triplet per plan §5.3 -----------------------------------
+.status-chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  white-space: nowrap;
+
+  &.state-pending {
+    color: var(--state-pending-fg);
+    background: var(--state-pending-bg);
+  }
+
+  &.state-progress {
+    color: var(--state-progress-fg);
+    background: var(--state-progress-bg);
+  }
+
+  &.state-blocked {
+    color: var(--state-blocked-fg);
+    background: var(--state-blocked-bg);
+  }
+
+  &.state-done {
+    color: var(--state-done-fg);
+    background: var(--state-done-bg);
+  }
+}
+
+.meta-pill {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-secondary);
+  color: var(--text-soft);
+  background: var(--surface);
+}
+
+.days-badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-chip);
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-soft);
+}
+
+// ---- Cards (§5) ---------------------------------------------------------------------------
+.card {
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.stat-card {
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+
+  .stat-number {
+    font-size: var(--fs-stat);
+    font-weight: 800;
+    color: var(--brand-dark);
+  }
+
+  .stat-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-secondary);
+    font-weight: 500;
+    color: var(--text-soft);
+  }
+}
+
+.stat-card-hero .stat-number,
+.stat-card-hero .stat-label {
+  color: var(--on-brand);
+}
+
+// ---- Page header --------------------------------------------------------------------------
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-end: var(--space-6);
+
+  h1 {
+    margin: 0;
+  }
+}
+
+// ---- Tabs (§6) ----------------------------------------------------------------------------
+.tabs {
+  position: sticky;
+  top: 0;
+  display: flex;
+  gap: var(--space-1);
+  margin-block-end: var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.tab {
+  padding: 15px 18px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text-soft);
+  text-decoration: none;
+  background: transparent;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: var(--brand-dark);
+    background: transparent;
+  }
+
+  &.active {
+    color: var(--brand-dark);
+    border-bottom-color: var(--brand);
+  }
+}
+
+// ---- Filter bar (§6) ----------------------------------------------------------------------
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+
+  .spacer {
+    flex: 1;
+  }
+}
+
+// ---- Data table (§6) ----------------------------------------------------------------------
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-control);
+
+  th {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 2px solid var(--border-strong);
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: start;
+    color: var(--text-faint);
+    background: var(--surface);
+  }
+
+  td {
+    padding: var(--space-2) var(--space-3);
+    border-top: 1px solid var(--row-border);
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  .num {
+    text-align: end;
+    font-weight: 700;
+    color: var(--brand-dark);
+  }
+}
+
+// ---- Overlays (§5) ------------------------------------------------------------------------
+@keyframes pop {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--overlay-backdrop);
+  backdrop-filter: blur(2px);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 470px;
+  border-radius: var(--radius-modal);
+  background: var(--panel);
+  box-shadow: var(--shadow-lg);
+  animation: pop 0.15s ease;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) 0;
+
+  h2 {
+    margin: 0;
+    font-size: var(--fs-card-title);
+  }
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: var(--space-4) var(--space-5);
+
+  p {
+    margin: 0;
+  }
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.toast-stack {
+  position: fixed;
+  bottom: var(--space-6);
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  transform: translateX(-50%);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-toast);
+  font-weight: 600;
+  color: var(--on-brand);
+  background: var(--brand-dark);
+  box-shadow: var(--shadow-lg);
+  animation: pop 0.15s ease;
+}
+
+.toast-dot {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  background: var(--state-progress-bar);
+}
+
+.toast-success .toast-dot {
+  background: var(--state-done-bar);
+}
+
+.toast-error .toast-dot {
+  background: var(--state-blocked-bar);
+}
+
+button.toast-close {
+  padding: 2px var(--space-2);
+}

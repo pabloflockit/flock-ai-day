@@ -198,9 +198,9 @@
         }
         —
         @if (epicDataset().isCurrent) {
-          <span class="badge is-current">Al día</span>
+          <span class="status-chip state-done">Al día</span>
         } @else {
-          <span class="badge is-stale">Desactualizado</span>
+          <span class="status-chip state-blocked">Desactualizado</span>
         }
       </p>
     }
@@ -215,7 +215,7 @@
 
     @if (rows().length > 0) {
       <div class="table-wrap">
-      <table>
+      <table class="data-table">
         <thead>
           <tr>
             <th>Clave</th>
@@ -238,7 +238,7 @@
               <td>{{ item.row.summary }}</td>
               <td>{{ item.row.issueTypeName }}</td>
               <td>
-                <span class="status-chip cat-{{ item.categoryKey }}">
+                <span class="status-chip {{ item.stateClass }}">
                   {{ item.row.statusName }}@if (item.category) { ({{ item.category }})}
                 </span>
               </td>
