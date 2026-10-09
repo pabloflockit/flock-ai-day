@@ -1,0 +1,20 @@
+// Reports modal — Flock Design System tokens only.
+.reports-period {
+  display: flex;
+  gap: var(--space-4);
+  margin-block-end: var(--space-3);
+}
+
+.reports-preview {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: var(--fs-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 50vh;
+  overflow-y: auto;
+}

@@ -1,6 +1,10 @@
 <header class="page-header">
   <h1>Dashboard</h1>
   @if (configState().status === 'ready' && state.activeTeams().length > 0) {
+    <div class="report-actions">
+      <button type="button" class="btn-ghost btn-small report-sprint" (click)="report.set('sprint')">Informe de sprint</button>
+      <button type="button" class="btn-ghost btn-small report-client" (click)="report.set('client')">Informe para cliente</button>
+    </div>
     <button type="button" class="outside-counter btn-ghost btn-small" (click)="view.set('outside')">
       {{ state.outsideOpenCount() }}
       {{ state.outsideOpenCount() === 1 ? 'unidad fuera del equipo' : 'unidades fuera del equipo' }}
@@ -129,4 +133,8 @@
 
 @if (drill(); as d) {
   <app-unit-list-modal [title]="d.title" [units]="d.units" [measure]="d.measure" (closed)="drill.set(null)" />
+}
+
+@if (report(); as kind) {
+  <app-reports-modal [kind]="kind" (closed)="report.set(null)" />
 }

@@ -66,13 +66,34 @@ function esc(text) {
     .replace(/^(#|[-+]|\d+[.)])/, '\\$1');
 }
 
+/**
+ * Display text of a measure value; `time_seconds` measures are already hours in the domain.
+ * Shared with the dashboard formatter so the wording cannot drift.
+ *
+ * @param {number} value
+ * @param {Measure} measure
+ */
+export function formatMeasureValue(value, measure) {
+  const text = numberFormat.format(value);
+  return measure.kind === 'field' && measure.valueType === 'time_seconds' ? `${text} h` : text;
+}
+
+/**
+ * Name of the measure: "Cantidad", the field name, or the field name with "(h)" for time.
+ *
+ * @param {Measure} measure
+ */
+export function measureLabel(measure) {
+  if (measure.kind === 'count') return 'Cantidad';
+  return measure.valueType === 'time_seconds' ? `${measure.fieldName} (h)` : measure.fieldName;
+}
+
 /** @param {Measure} measure */
 const fieldName = (measure) => (measure.kind === 'field' ? measure.fieldName : 'Cantidad');
 
 /** @param {ReportGroup} group */
 function groupTitle(group) {
-  const label = group.measure.kind === 'count' ? 'Cantidad' : group.measure.valueType === 'time_seconds' ? `${group.measure.fieldName} (h)` : group.measure.fieldName;
-  return `${group.unitType === 'task' ? 'Tareas' : 'Subtareas'} · ${label}`;
+  return `${group.unitType === 'task' ? 'Tareas' : 'Subtareas'} · ${measureLabel(group.measure)}`;
 }
 
 /** @param {'task' | 'subtask'} unitType @param {number} n */
@@ -80,11 +101,7 @@ const unitCount = (unitType, n) => `${n} ${unitType === 'task' ? 'tarea' : 'subt
 /** @param {'task' | 'subtask'} unitType */
 const unitNoun = (unitType) => (unitType === 'task' ? 'tareas' : 'subtareas');
 
-/** @param {number} value @param {Measure} measure */
-function measureText(value, measure) {
-  const text = numberFormat.format(value);
-  return measure.kind === 'field' && measure.valueType === 'time_seconds' ? `${text} h` : text;
-}
+const measureText = formatMeasureValue;
 
 /** @param {{ count: number, measure: number, missingMeasure: WorkUnit[] }} done @param {{ count: number, measure: number, missingMeasure: WorkUnit[] }} total @param {ReportGroup} group */
 function progressText(done, total, group) {

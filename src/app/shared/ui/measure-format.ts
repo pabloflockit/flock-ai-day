@@ -1,20 +1,10 @@
+import { measureLabel } from '../../../../shared/domain/reports.mjs';
 import type { Measure } from '../../../../shared/domain/work-units.mjs';
 
 export type UnitType = 'task' | 'subtask';
 
-const numberFormat = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 });
-
-/** Display text of a measure value; `time_seconds` measures are already hours in the domain. */
-export function formatMeasure(value: number, measure: Measure): string {
-  const text = numberFormat.format(value);
-  return measure.kind === 'field' && measure.valueType === 'time_seconds' ? `${text} h` : text;
-}
-
-/** Name of the measure: "Cantidad", the field name, or the field name with "(h)" for time. */
-export function measureLabel(measure: Measure): string {
-  if (measure.kind === 'count') return 'Cantidad';
-  return measure.valueType === 'time_seconds' ? `${measure.fieldName} (h)` : measure.fieldName;
-}
+// One implementation of the measure wording, shared with the Markdown reports.
+export { formatMeasureValue as formatMeasure, measureLabel } from '../../../../shared/domain/reports.mjs';
 
 /** Section title of a measurement group, e.g. "Subtareas · Story points". */
 export function groupTitle(unitType: UnitType, measure: Measure): string {

@@ -28,7 +28,7 @@ the dashboard.
 ## Tasks
 
 - [x] 1. Reports domain — test-first: period helpers, sprint and client Markdown, no-names test, figures equal M1.
-- [ ] 2. Reports UI — dashboard buttons, date range (default last 2 weeks), preview, copy and save via the bridge.
+- [x] 2. Reports UI — dashboard buttons, date range (default last 2 weeks), preview, copy and save via the bridge.
 - [ ] 3. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live check by the user.
 
 ## Evidence
@@ -39,3 +39,13 @@ the dashboard.
   stale units never appear in the client Markdown. Printed figures equal `progress()`. Issue text escaped as data.
   Measure wording duplicated from `src/app/shared/ui/measure-format.ts` (to unify in task 2).
   Commit: `feat(domain): add sprint and client reports`.
+- Task 2 (worker): `src/app/pages/dashboard/reports-modal.*` (`kind` sprint | client), header buttons "Informe de
+  sprint" / "Informe para cliente"; period `Desde`/`Hasta` (default `defaultPeriod`, from > to or empty -> inline
+  error, no preview); scope note = team + project/epic filter; `<pre>` preview of the exact Markdown; "Copiar"
+  (`copyText`) and "Guardar .md" (`saveMarkdown`, name `informe-<sprint|cliente>-<team-slug>-<from>_<to>.md`),
+  disabled outside Electron; a cancelled save dialog (`{ ok: true, canceled: true }`) is silent. Measure wording now
+  lives only in `shared/domain/reports.mjs` (`formatMeasureValue`, `measureLabel`), re-exported by
+  `measure-format.ts`. Karma 166/166 (9 new; RED not observed — specs written with the code), node 467/467,
+  `build:desktop` OK. No screenshot. Incident: the worker printed the shell environment (incl. `JIRA_API_TOKEN`,
+  `NPM_TOKEN`) into its tool output by mistake; nothing written to the repo (checked), user advised to rotate.
+  Commit: `feat(dashboard): add sprint and client report preview with copy and save`.

@@ -9,12 +9,13 @@ import { AddMemberModal } from './add-member-modal';
 import { DashboardGroupView } from './dashboard-group';
 import { DashboardOutside, type OutsidePerson } from './dashboard-outside';
 import { DashboardState } from './dashboard.state';
+import { type ReportKind, ReportsModal } from './reports-modal';
 
 /** Team dashboard (plan §6.2): team -> project -> epic selectors over the cached `projectIssues` data. */
 @Component({
   selector: 'app-dashboard-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, InstantPipe, DashboardGroupView, DashboardOutside, UnitListModal, AddMemberModal],
+  imports: [RouterLink, InstantPipe, DashboardGroupView, DashboardOutside, UnitListModal, AddMemberModal, ReportsModal],
   providers: [DashboardState],
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss',
@@ -30,6 +31,8 @@ export class DashboardPage {
 
   /** Team view or "Fuera del equipo"; switching is a pure view change over the same loaded data. */
   readonly view = signal<'team' | 'outside'>('team');
+  /** Report modal currently open, if any. */
+  readonly report = signal<ReportKind | null>(null);
   /** Person whose "Agregar al equipo" flow is open. */
   readonly adding = signal<OutsidePerson | null>(null);
 
