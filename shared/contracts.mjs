@@ -78,3 +78,33 @@ export function okEnvelope(data) {
 export function errorEnvelope(code, message, details) {
   return { ok: false, error: details === undefined ? { code, message } : { code, message, details } };
 }
+
+/**
+ * Flat, typed issue row returned by the proxy (architecture §6.3). The client never reads raw
+ * Jira `fields` or `customfield_*`. No derived values live here (they are computed in the domain).
+ *
+ * @typedef {{
+ *   key: string,
+ *   issueTypeId: string,
+ *   issueTypeName: string,
+ *   hierarchyLevel: number,
+ *   isSubtask: boolean,
+ *   summary: string,
+ *   parentKey: string | null,
+ *   epicKey: string | null,
+ *   statusId: string,
+ *   statusName: string,
+ *   statusCategory: 'todo' | 'doing' | 'done',
+ *   statusSince: string | null,
+ *   firstDoingAt: string | null,
+ *   doneAt: string | null,
+ *   resolvedAt: string | null,
+ *   assigneeAccountId: string | null,
+ *   assigneeName: string | null,
+ *   priorityName: string | null,
+ *   measures: Record<string, number | null>,
+ *   createdAt: string,
+ *   updatedAt: string,
+ *   dueDate: string | null,
+ * }} IssueRow
+ */

@@ -87,6 +87,7 @@ async function startProxy(secrets) {
   const { createConfigStore } = await load('config/store.mjs');
   const { createJiraEndpoint } = await load('config/jira-endpoint.mjs');
   const { createJiraClient } = await load('jira/client.mjs');
+  const { createProjectIssuesService } = await load('jira/refresh.mjs');
   // The database opens without the key; a key that cannot decrypt it surfaces lazily as
   // DATA_KEY_INVALID on the config/dataset routes (and nothing is overwritten).
   const handle = openDatabase({ path: getDbPath() });
@@ -100,6 +101,11 @@ async function startProxy(secrets) {
     secrets,
     fetchImpl: guardedFetch,
   });
+  const datasets = createProjectIssuesService({
+    db: { handle, getDataKey: () => secrets.getDataKey() },
+    client: jira,
+    getConfig: () => configStore.load(),
+  });
   const port = await findAvailablePort(PROXY_PORT_RANGE_START);
   proxyServer = await startProxyServer({
     port,
@@ -108,7 +114,7 @@ async function startProxy(secrets) {
     proxySecret,
     allowedOrigins: getAllowedOrigins({ dev: isDevMode() }),
     secrets,
-    stores: { config: configStore },
+    stores: { config: configStore, datasets },
     fetch: guardedFetch,
     jira,
   });

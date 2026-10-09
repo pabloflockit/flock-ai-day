@@ -7,6 +7,7 @@ import { registerSecretRoutes } from './routes/secrets.mjs';
 import { registerConfigRoutes } from './routes/config.mjs';
 import { registerConnectionRoutes } from './routes/connection.mjs';
 import { registerJiraMetaRoutes } from './routes/jira-meta.mjs';
+import { registerDatasetRoutes } from './routes/datasets.mjs';
 import { createSecretGuard } from './security/session-secret.mjs';
 import { evaluateCors } from './security/cors.mjs';
 
@@ -86,7 +87,7 @@ function readPackageVersion() {
  *   secrets?: { getJiraToken(): string | null, setJiraToken(v: string): void, getAiKey(): string | null, setAiKey(v: string): void, getDataKey(): Buffer },
  *   fetch?: typeof fetch,
  *   jira?: ReturnType<typeof import('./jira/client.mjs').createJiraClient>,
- *   stores?: { config?: ReturnType<typeof import('./config/store.mjs').createConfigStore> },
+ *   stores?: { config?: ReturnType<typeof import('./config/store.mjs').createConfigStore>, datasets?: ReturnType<typeof import('./jira/refresh.mjs').createProjectIssuesService> },
  *   guards?: Array<(ctx: import('./router.mjs').RouteContext) => GuardResult | null | Promise<GuardResult | null>>,
  *   registerRoutes?: Array<(router: ReturnType<typeof createRouter>) => void>,
  * }} ProxyDeps
@@ -102,7 +103,7 @@ function readPackageVersion() {
  *  - `deps.secrets` / `deps.fetch`: in-process only dependencies (token store, guarded fetch);
  *    never reachable by the renderer.
  *  - `deps.jira`: the whitelisted Jira client (built over the guarded fetch); routes answer 503 without it.
- *  - `deps.stores`: `{ config, datasets }` persistence, built from the encrypted SQLite cache.
+ *  - `deps.stores`: `{ config, datasets }`: the config store and the project-issues service, both over the encrypted SQLite cache.
  *  - `deps.guards`: extra request guards run after the secret check. A guard returns `null` to continue, or a `{ status, body }` result to short-circuit.
  *  - `deps.registerRoutes`: extra route modules from `proxy/routes/`.
  *
@@ -125,6 +126,7 @@ export function createProxyServer(deps) {
   registerConfigRoutes(router);
   registerConnectionRoutes(router);
   registerJiraMetaRoutes(router);
+  registerDatasetRoutes(router);
   for (const register of deps.registerRoutes ?? []) register(router);
 
   /**
