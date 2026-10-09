@@ -14,7 +14,7 @@ Branch: `main` (user decision: commit each task directly on `main` and push righ
 - [x] 3. Security — session secret (`X-Proxy-Secret`), `safeStorage` token + data key, write-only token endpoint, Jira URL validation, outbound host allowlist, preload bridge (`openInJira`, `copyText`, `saveMarkdown`), CSP, navigation blocking.
 - [x] 4. Cache and config — `node:sqlite` schema, AES-256-GCM payloads and config, dataset read/write, `resolveTarget`, `normalizeConfig`, `validateConfig` base.
 - [x] 5. Jira client and projection (split for review size: 5a client, metadata, connection routes; 5b projection, hierarchy, refresh, dataset routes) — client (pagination via `nextPageToken`, backoff, error codes, injectable fetch), `IssueRow` projection, hierarchy by `epicLinkMode`, delta/full refresh, `PAYLOAD_VERSION`, stale-not-empty degradation, dataset routes.
-- [ ] 6. Domain dates — UTC utilities, calendar date vs instant formatters, `businessDaysBetween`, local-calendar weeks, `effectiveCategory`.
+- [x] 6. Domain dates — UTC utilities, calendar date vs instant formatters, `businessDaysBetween`, local-calendar weeks, `effectiveCategory`.
 - [ ] 7. Diagnostics, demo, validator — signal store with key-based hydration, diagnostics page, `--demo` mode with fixture fetch and separate DB, `tools/validate-scope.mjs`, section 12 checklist pass.
 
 ## Evidence
@@ -28,3 +28,5 @@ Branch: `main` (user decision: commit each task directly on `main` and push righ
 - Task 5a: `node --test` 241/241, `ng build` ok, fake fetch only (no live Jira). Verify route uses a one-shot `forHost` fetch without auth; non-Cloud → 422 `NOT_CLOUD`. VERIFY against Atlassian OpenAPI: `/search/jql` POST with `nextPageToken`, no total, `changelog` expand valid; epic level 1, standard 0, subtask -1. Still open: changelog truncation (VERIFY-2) and the real instance type table (VERIFY-4). Also fixed stray Latin-1 `§` bytes in `docs/decisions.md`.
 - Task 5a commit: `dee153e`.
 - Task 5b: `node --test` 291/291, `ng build` ok, fake client only. Per-epic delta window from each epic's `lastOkAt` + 5 min; failed epics keep cached rows, `is_current = 0`; metadata failure marks all shards failed instead of throwing; refresh coalescing per key. Known limits for flow 2: `doneAt` is not cleared on reopen (domain must read it with the current category); `firstDoingAt` is `null` for issues created directly in a doing status; changelog completion can peak at ~36 concurrent requests. VERIFY-2/3/4 handled in code, not probed live.
+- Task 5b commit: `f6963bd`.
+- Task 6: `node --test` 322/322, `ng build` ok (pipes compile, not yet used in a template). Conventions: business days counted in `(from, to]` on local calendar dates, reversed args negate, `isStale` strict `>`, `timeZone` required in pure functions, `effectiveDoneAt` returns `null` unless the effective category is done.
