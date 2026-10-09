@@ -21,21 +21,29 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 | Headlines and "Lectura del sprint" narrative | Narrative: optional AI drafting (plan §8.2), never computing figures |
 | Styled HTML output | Reports are Markdown; the bridge saves only `.md` — needs `saveHtml` with validation in main |
 
-## Decisions to confirm at kickoff
+## Decisions (user, 2026-10-09)
 
-- Layer model: per member in the team config (FE / BE / Funcional / other) and whether subtask types also map.
-- Period: free date range vs named sprints (the Agile API is listed as evolution).
-- Items outside the team's epics: keep out, or add a member-based query.
-- HTML export: new `saveHtml` bridge vs HTML preview + copy only.
+- Layers come from Jira COMPONENTS: per project, the user picks from the component list Jira returns which
+  components map to Frontend, Backend or Funcional (VERIFY the components endpoint and the `components` issue field
+  with a read-only call before coding; plan rule: never invent Jira endpoints or fields).
+- Period: a free date range the user picks (no Jira sprints).
+- Work of team members outside the team's epics goes to a SEPARATE section, for tracking.
+- HTML export: add a `saveHtml` bridge function (validated in main, `.html` only).
+- AI narrative (headlines, sprint reading): only available when the AI key is stored (and AI is enabled in
+  settings); the model only drafts, figures come from the deterministic model and are checked.
 
 ## Draft tasks (deterministic first)
 
 - [ ] 1. Status transition history in `IssueRow` (proxy projection from the changelog, payload version bump, tests).
-- [ ] 2. Member layer in the config (`normalizeConfig`, `validateConfig`, teams screen) and the layer rules.
-- [ ] 3. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
-      hygiene notes (test-first).
-- [ ] 4. HTML template with the Flock design tokens + `saveHtml` bridge (validated in main) + preview.
-- [ ] 5. Close: demo coverage, docs, decisions.
-- [ ] 6. (Optional, later) AI-drafted headlines and sprint reading with the figures check of plan §8.2.
+- [ ] 2. Components: read-only fetch of each project's components, `components` on `IssueRow`, component -> layer
+      mapping in the project config (`normalizeConfig`, `validateConfig`, project screen picker).
+- [ ] 3. Outside-the-epics dataset: read-only query for the team members' issues with movement in the period that
+      are not under the team's epics (separate section).
+- [ ] 4. Pure report model: movement in the period, layer -> epic -> primary with its subtasks, "ref." rows, KPIs,
+      hygiene notes, outside-epics section (test-first).
+- [ ] 5. HTML template with the Flock design tokens, date-range picker, preview, `saveHtml` bridge (validated in main).
+- [ ] 6. Close: demo coverage (components, history, outside epics), docs, decisions.
+- [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
+      plan §8.2.
 
 ## Evidence
