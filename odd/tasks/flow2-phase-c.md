@@ -36,6 +36,18 @@ work not assigned to the team appears only in its own section; statuses and char
 - [x] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
 - [ ] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
 
+## Live checklist (user, against the real instance)
+
+1. Sync first ("Sincronización" -> "Sincronizar ahora"), then open "Panel" -> "Dashboard".
+2. Pick the real team and one epic. Hand-verify against Jira (same epic): total tasks, done tasks, and the measure
+   sum (M1); count per status (M2); "En curso" (M3). Only issues assigned to active team members count.
+3. Click several numbers (KPI, progress, a status segment, a person's load, a week bar): each opens its list, and a
+   key opens the issue in Jira.
+4. "Fuera del equipo": unassigned and other people's open work appear there and NOT in the "Equipo" view.
+5. "Agregar al equipo" on a person: the search opens preloaded; adding moves their work into the team view.
+6. If a project measures subtasks: the "N tareas no tienen subtareas" notice and its list.
+7. Status/chart colors (todo grey, doing purple, done green) in dark and light mode.
+
 ## Evidence
 
 - Task 1 (worker, test-first): `shared/domain/work-units.mjs` `buildWorkUnits(rows, project, config)` ->
@@ -75,3 +87,10 @@ work not assigned to the team appears only in its own section; statuses and char
   7/7 before the code), node 457/457, `build:desktop` OK. Outside-only Karma spec: unassigned and other-person units
   absent from `groups()` and shown only in the outside view. No screenshot taken.
   Commit: `feat(dashboard): add outside-the-team view with add to team`.
+- Task 7 (in progress): demo smoke in Electron via CDP (`electron . --demo --remote-debugging-port=9333`, scripts
+  outside the repo): dashboard dark/light, outside view, drill-down modal; no console errors. "Agregar al equipo" not
+  reachable in demo (no outside person in the fixtures). Fixes from the screenshots: `.num-link.missing` moved to the
+  global styles (the outside view lacked the warning color) and the header counter uses `btn-ghost btn-small`
+  (commit `fix(dashboard): style missing-measure counters and outside counter`). Verify after the fix: node 457/457,
+  Karma 157/157, `build:desktop` OK, computed styles checked. `docs/decisions.md` entries "Flow 2 phase C domain" and
+  "Flow 2 phase C UI". Pending: the user's live checklist (hand-verify one epic against Jira).
