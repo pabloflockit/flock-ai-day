@@ -363,6 +363,8 @@ POST /api/reports/ai                 # solo si está habilitado; recibe métrica
 
 **Pantalla «Cierre de sprint» (`/sprint-close`).** Usa el equipo elegido en la propia página (por defecto el primero activo, igual que el dashboard) y un rango libre (`Desde`/`Hasta`, por defecto los últimos 14 días en la zona horaria local). El store hidrata `projectIssues` de los proyectos del equipo y `memberIssues` (clave por `since`, `ensureMemberIssues`/`refreshMemberIssues`; el cliente agrega `&since=` a la lectura y al refresh). `buildSprintClose` corre en un `computed()`, la vista previa es el HTML de `renderSprintCloseHtml` en un `<iframe sandbox="" srcdoc>` (sin scripts) y «Exportar HTML» usa `saveHtml` del puente de escritorio.
 
+**Redacción con IA (`POST /api/reports/ai`).** Solo con `settings.ai.enabled` y la clave de IA guardada; la clave queda en el proxy. El renderer envía `narrativeInput` (cifras del informe, conteos por capa y épica, claves y títulos de ítems cerrados y bloqueados, notas de higiene; sin personas); el proxy lo envuelve como datos en un prompt fijo y llama a Anthropic `POST /v1/messages`. El host `api.anthropic.com` entra en la lista de salidas permitidas solo mientras la IA está habilitada. Las cifras del texto se verifican contra el informe (`checkNarrativeFigures`). En modo demo responde un texto fijo sin red.
+
 `PUT /api/config` devuelve la lista de claves de cache que **cambiaron** por la edición, para que el front precaliente solo esas.
 
 ---

@@ -1,6 +1,6 @@
 # Feature: sprint-report (layered sprint close report)
 
-Status: IN PROGRESS (flow 2 closed 2026-10-09). Branch: `main`, one commit per task, pushed.
+Status: CLOSED 2026-10-09 (pending the user's check against the real instance). Branch: `main`, one commit per task, pushed.
 
 Goal: a "Sprint close" report like the reference HTML the user shared (a team's sprint close: work with real status
 movement in the period, split by layer — Frontend, Backend, functional follow-up — and by issue level, grouped by
@@ -59,7 +59,7 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
 - [x] 5b. Report UI: date-range picker, hydrate `memberIssues` + team datasets + statuses, preview, export.
 - [x] 6a. Demo coverage: components mapped to layers, blocked statuses, hygiene cases (parallel with task 7).
 - [ ] 6b. Close: merge task 7, docs, README, decisions, final demo smoke.
-- [ ] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
+- [x] 7. AI-drafted headlines and sprint reading, enabled only with a stored AI key, with the figures check of
       plan §8.2.
 
 ## Evidence
@@ -146,3 +146,11 @@ epic, with KPIs and Jira hygiene notes), exported as a styled HTML file.
   `test/demo-sprint-close.test.mjs` runs the real client over the demo fetch -> `buildSprintClose` ->
   `renderSprintCloseHtml`. RED observed (no layers). node 550/550.
   Commit: `test(demo): cover every sprint close feature in the demo`.
+- Task 7 (worker, worktree `feat/sprint-close-ai`, commit baaef71, merged into main with `--no-ff` 6bd5a54):
+  `shared/domain/ai-narrative.mjs` (`narrativeInput` without people, `checkNarrativeFigures`, `parseNarrative`),
+  `proxy/ai/{prompt,anthropic,demo-narrative}.mjs`, `POST /api/reports/ai` (AI enabled + key stored; Anthropic
+  `/v1/messages`, model `claude-sonnet-4-5`; stable error codes; key never echoed), egress to `api.anthropic.com` only
+  while AI is enabled, demo canned narrative wired in `electron/main.cjs` (dummy key only under `--demo`), page
+  "Redactar con IA" with confirmation, editable result, figures warning; narrative block in the exported HTML.
+  RED partly reconstructed (renderer block, egress); domain/route/Karma tests written after the code.
+  Branch: node 570, Karma 199, build OK. After the merge on main: node 572/572.

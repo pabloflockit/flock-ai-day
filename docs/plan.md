@@ -296,6 +296,7 @@ Cubren la parte de "informes de sprint" e "informes de cliente" del challenge.
 - Fechas del período sobre el calendario local (`architecture.md` §9): "cerrado en el período" usa la fecha calendario local de `doneAt`.
 
 ### 8.2 Redacción con IA (opcional, desactivada por defecto)
+- **Implementado** para el cierre de sprint (titulares y lectura del sprint), proveedor Anthropic; ver `decisions.md`.
 - Si `settings.ai.enabled` y hay API key: botón "Redactar con IA" que envía **solo las métricas agregadas del informe ya generado** (y claves/títulos de issues si el informe los incluye) a `POST /api/reports/ai`. El proxy hace la llamada; la API key nunca llega al renderer.
 - Aviso previo de qué datos se envían.
 - El modelo **solo redacta**: no calcula cifras. Los números del texto final se comparan con los de la plantilla con una función pura del dominio; si no coinciden, se muestra una advertencia.
@@ -341,7 +342,7 @@ Tiempos orientativos con la base del flujo 1 lista.
 **Corte mínimo demostrable: fases A a E.** Total del flujo 2 ≈ 5 h; sumando el flujo 1 (≈ 2 h 30 a 3 h), ≈ 7 h 30 a 8 h.
 
 ### Si sobra tiempo (en este orden)
-1. Redacción con IA de los informes (8.2).
+1. Redacción con IA de los informes Markdown (8.2; el cierre de sprint ya la tiene).
 2. Métricas P1 (M7–M10, F3).
 3. Modo oscuro según la skill (`html.dark`).
 4. Búsqueda de épicas por texto.

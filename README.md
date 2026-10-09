@@ -33,6 +33,8 @@ same numbers. The app is **read-only on Jira**: it never writes to it.
 | Dashboard (M1–M6) | Progress, status distribution, work in progress, load per person, stale work, weekly throughput. Every number opens the list of items behind it (drill-down). |
 | "Fuera del equipo" (F1–F2) | Work in the team's epics that is unassigned (F1) or assigned to people outside the team (F2), kept apart from the main metrics. "Agregar al equipo" adds someone from there. |
 | Reports | Sprint report (internal) and client report (no people names, enforced by a test). Preview, **copy**, or **save as `.md`**. |
+| Cierre de sprint | Sprint close for a team and a free date range: only work with **real status movement** in the period, split by **layer** (Frontend / Backend / Funcional, mapped from Jira components; unmapped work goes to "Sin capa"), grouped by epic with primaries and their subtasks ("ref." rows give context without counting twice), KPIs (moved, primaries, secondaries, closed, blocked), **Jira hygiene notes**, and the members' work **outside the team's epics**. Preview and **export as a standalone `.html`**. |
+| AI drafting (optional) | On the sprint close, "Redactar con IA" drafts headlines and a sprint reading with Anthropic. Off by default; needs the switch in Configuración and a stored key. Only report figures, keys and titles of closed/blocked items and hygiene notes are sent (no people). The model never computes figures: every number in the text is checked against the report and a warning lists unknown ones. |
 | Theme | Light and dark. |
 | Diagnostics | Local service health, connection test, test-epic check, and the database recovery action. |
 
@@ -89,6 +91,12 @@ files). Never commit real values.
   is pinned to the fictional host `demo.example.atlassian.net`.
 - It uses its **own database** (a `demo` subfolder), so it never touches your real data.
 - The token is a dummy; anything you type as a token is discarded.
+- The demo configuration is seeded **on the first start only**: it maps the fictional components to
+  layers and marks "Blocked" as a blocked status. A demo database created by an older version keeps
+  its old configuration; map the layers in Conexión → Particularidades, or delete the `demo`
+  subfolder of the app data to reseed it.
+- "Redactar con IA" answers a **fixed demo text** (no AI provider is called); turn AI on in
+  Configuración to see it.
 
 > **Intentional:** the demo shows the notice **"Algunos datos no están al día"**. Epic `DEMO-3`
 > fails on purpose (Jira answers 400). This demonstrates the degradation rule: a failing epic
@@ -122,6 +130,9 @@ First-run flow, following the sidebar:
 7. **Dashboard** — pick team → project → epic; open any number for its items. Review
    "Fuera del equipo" and use "Agregar al equipo" when someone belongs in the team.
 8. **Informes** — from the dashboard, generate the sprint or client report; copy it or save `.md`.
+9. **Cierre de sprint** — first map Jira components to layers and choose the blocked statuses in
+   Conexión → Particularidades. Then pick the team and the dates, "Actualizar datos", review the
+   preview (optionally "Redactar con IA") and "Exportar HTML".
 
 Opening the dashboard never syncs Jira: it reads the local cache. A sync refreshes the dashboard
 without a reload.
@@ -207,21 +218,17 @@ Key ones (full log with rationale: [`docs/decisions.md`](docs/decisions.md)):
 ## Limitations
 
 - **One Jira Cloud site**; no Server/Data Center, no multi-tenant.
-- **Scope is per epic.** Work outside the registered epics is not seen (only team members' work
-  inside them is classified as in-team or "Fuera del equipo").
+- **Scope is per epic.** The dashboard only sees the registered epics. The sprint close also lists
+  the members' work outside them, by **current assignee** (work reassigned away is not listed).
+- **Layers come only from Jira components.** Issues without a mapped component go to "Sin capa".
 - **Business days are Monday–Friday, without holidays.**
 - **Windows only.**
-- Only the last status change of an issue is kept (no full transition history).
-- No AI drafting yet; reports are generated from templates and metrics.
+- AI drafting uses Anthropic only (model in `proxy/ai/anthropic.mjs`); the text must be reviewed before sharing.
 - UI copy is Spanish only.
 
 ## Evolution
 
-- **Layered sprint report** (planned, starts after this phase; see
-  [`odd/tasks/sprint-report.md`](odd/tasks/sprint-report.md)): work with real status movement in
-  a free date range, split by layer (Frontend / Backend / functional, mapped from Jira components),
-  grouped by epic, with KPIs, Jira hygiene notes, and styled HTML export.
-- **Optional AI drafting** of report prose (aggregated metrics only; numbers stay computed, never written by the model).
+- A team selection shared between the dashboard and the sprint close page.
 - MCP queries to Jira and Flocktools from inside the app.
 - Sprints through the Jira Agile API.
 - Holidays in business-day calculations.
