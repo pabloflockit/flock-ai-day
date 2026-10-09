@@ -34,7 +34,7 @@ work not assigned to the team appears only in its own section; statuses and char
 - [x] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
 - [x] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
 - [x] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
-- [ ] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
+- [x] 7. Phase close — suites, build, demo smoke, `docs/decisions.md` entry, live checklist (hand-verify one epic against Jira).
 
 ## Live checklist (user, against the real instance)
 
@@ -94,3 +94,6 @@ work not assigned to the team appears only in its own section; statuses and char
   (commit `fix(dashboard): style missing-measure counters and outside counter`). Verify after the fix: node 457/457,
   Karma 157/157, `build:desktop` OK, computed styles checked. `docs/decisions.md` entries "Flow 2 phase C domain" and
   "Flow 2 phase C UI". Pending: the user's live checklist (hand-verify one epic against Jira).
+- Task 7 close (user, real instance): the dashboard looks right and the figures look plausible, but the user could
+  not confirm them 100% against Jira. Exit criterion "figures hand-verified against Jira for one epic" is therefore
+  NOT fully met; accepted by the user to move on to phase D. Commit: `docs: close flow 2 phase C`.
