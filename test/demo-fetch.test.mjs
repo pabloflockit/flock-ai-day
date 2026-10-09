@@ -207,3 +207,26 @@ test('default demo run: healthy epics ok, the failing one is marked failed', asy
   );
   assert.ok(out.rows.length >= 12);
 });
+
+test('shows every dashboard feature: a findable non-member with open work, a member to do, an unassigned open unit', async () => {
+  const f = createDemoFetch({ now: () => NOW });
+  const found = await (await get(f, '/rest/api/3/user/search?query=Carla')).json();
+  const carla = found.find((u) => u.active === true && u.accountType === 'atlassian');
+  assert.equal(carla?.displayName, 'Carla Demo');
+  const memberIds = buildDemoConfig().teams[0].members.map((m) => m.accountId);
+  assert.ok(!memberIds.includes(carla.accountId), 'Carla is not a member of the demo team');
+
+  const page = await (
+    await search(f, {
+      jql: 'parent in ("DEMO-1","DEMO-2") AND statusCategory != Done',
+      fields: ['assignee', 'status'],
+    })
+  ).json();
+  const open = page.issues;
+  assert.ok(open.filter((i) => i.fields.assignee?.accountId === carla.accountId).length >= 1);
+  assert.ok(
+    open.some((i) => i.fields.status.statusCategory.key === 'new' && memberIds.includes(i.fields.assignee?.accountId)),
+    'a member has a To Do unit',
+  );
+  assert.ok(open.some((i) => i.fields.assignee === null), 'an open unit stays unassigned');
+});

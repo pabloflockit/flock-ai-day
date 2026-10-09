@@ -16,8 +16,15 @@
   {
     "accountId": "demo-account-003",
     "accountType": "atlassian",
+    "active": true,
+    "displayName": "Carla Demo",
+    "emailAddress": "carla.demo@example.com"
+  },
+  {
+    "accountId": "demo-account-005",
+    "accountType": "atlassian",
     "active": false,
-    "displayName": "Carla Demo (inactive)",
+    "displayName": "Dario Demo (inactive)",
     "emailAddress": null
   },
   {
