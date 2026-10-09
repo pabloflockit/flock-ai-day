@@ -111,3 +111,12 @@ test('does not mutate its input', () => {
   normalizeConfig(messy);
   assert.deepEqual(messy, copy);
 });
+
+test('a valid jira.baseUrl is stored as its canonical origin; an invalid one is kept for validation', () => {
+  assert.equal(normalizeConfig({ jira: { baseUrl: 'https://ACME.atlassian.net/' } }).jira.baseUrl, 'https://acme.atlassian.net');
+  assert.equal(normalizeConfig({ jira: { baseUrl: 'https://acme.atlassian.net/some/path' } }).jira.baseUrl, 'https://acme.atlassian.net');
+  // Invalid values are not silently "fixed": validateConfig must still see and reject them.
+  assert.equal(normalizeConfig({ jira: { baseUrl: 'http://acme.atlassian.net' } }).jira.baseUrl, 'http://acme.atlassian.net');
+  const once = normalizeConfig({ jira: { baseUrl: 'https://ACME.atlassian.net/' } });
+  assert.deepEqual(normalizeConfig(once), once);
+});

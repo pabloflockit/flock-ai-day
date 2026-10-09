@@ -1,3 +1,16 @@
+import { validateJiraUrl } from '../../shared/jira-url.mjs';
+
+/**
+ * A valid Jira URL is stored as its canonical origin (`https://host`, lower-case, no path or
+ * trailing slash) so every writer stores the same value. Invalid input is returned unchanged:
+ * `validateConfig` must still see it and reject it instead of it being silently "fixed".
+ * @param {string} value
+ */
+function canonicalBaseUrl(value) {
+  const result = validateJiraUrl(value);
+  return result.ok ? result.origin : value;
+}
+
 /**
  * `normalizeConfig` is the ONLY place where the shape of the configuration is defined and
  * migrated (architecture §8.4). It is a whitelist: unknown keys are dropped, invalid values fall
@@ -145,7 +158,7 @@ export function normalizeConfig(raw) {
   return {
     version: CONFIG_VERSION,
     jira: {
-      baseUrl: str(jira.baseUrl),
+      baseUrl: canonicalBaseUrl(str(jira.baseUrl)),
       email: str(jira.email),
       epicLinkMode: oneOf(jira.epicLinkMode, ['parent', 'epic_link', 'auto'], 'auto'),
       epicLinkFieldId: strOrNull(jira.epicLinkFieldId),
