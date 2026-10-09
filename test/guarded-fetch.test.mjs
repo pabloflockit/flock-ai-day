@@ -76,3 +76,16 @@ test('accepts URL objects and request-like objects; redirects are never followed
   assert.equal(calls[0].init.redirect, 'error');
   await assert.rejects(guarded({ url: 'https://evil.example/b' }), blocked);
 });
+
+test('forHost allows exactly one extra host, nothing else, and does not widen the base fetch', async () => {
+  const { guarded, calls } = setup([]);
+  const once = guarded.forHost('candidate.atlassian.net');
+  await once('https://candidate.atlassian.net/rest/api/3/serverInfo');
+  assert.equal(calls.length, 1);
+  await assert.rejects(once('https://other.atlassian.net/x'), blocked);
+  await assert.rejects(once('http://candidate.atlassian.net/x'), blocked);
+  await assert.rejects(guarded('https://candidate.atlassian.net/x'), blocked);
+  await assert.rejects(guarded.forHost('127.0.0.1')('https://127.0.0.1/x'), blocked);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].init.redirect, 'error');
+});

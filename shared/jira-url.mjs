@@ -5,8 +5,8 @@
  * `new URL` already canonicalises numeric hosts (`2130706433`, `0x7f.1` -> `127.0.0.1`), so the
  * checks below run on the canonical form.
  *
- * TODO(task 5, Jira client): after this static check, call `/rest/api/3/serverInfo` and require
- * `deploymentType === 'Cloud'` before saving the URL. That network check is NOT part of this module.
+ * The network check (`/rest/api/3/serverInfo` with `deploymentType === 'Cloud'`) lives in
+ * `POST /api/connection/verify` (proxy/routes/connection.mjs); this module stays static.
  */
 
 const MAX_URL_LENGTH = 2048;

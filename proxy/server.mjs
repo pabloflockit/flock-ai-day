@@ -5,6 +5,8 @@ import { createRouter } from './router.mjs';
 import { registerHealthRoutes } from './routes/health.mjs';
 import { registerSecretRoutes } from './routes/secrets.mjs';
 import { registerConfigRoutes } from './routes/config.mjs';
+import { registerConnectionRoutes } from './routes/connection.mjs';
+import { registerJiraMetaRoutes } from './routes/jira-meta.mjs';
 import { createSecretGuard } from './security/session-secret.mjs';
 import { evaluateCors } from './security/cors.mjs';
 
@@ -83,6 +85,7 @@ function readPackageVersion() {
  *   allowedOrigins?: readonly string[],
  *   secrets?: { getJiraToken(): string | null, setJiraToken(v: string): void, getAiKey(): string | null, setAiKey(v: string): void, getDataKey(): Buffer },
  *   fetch?: typeof fetch,
+ *   jira?: ReturnType<typeof import('./jira/client.mjs').createJiraClient>,
  *   stores?: { config?: ReturnType<typeof import('./config/store.mjs').createConfigStore> },
  *   guards?: Array<(ctx: import('./router.mjs').RouteContext) => GuardResult | null | Promise<GuardResult | null>>,
  *   registerRoutes?: Array<(router: ReturnType<typeof createRouter>) => void>,
@@ -98,6 +101,7 @@ function readPackageVersion() {
  *  - `deps.allowedOrigins`: CORS allowlist. A request carrying any other `Origin` gets 403.
  *  - `deps.secrets` / `deps.fetch`: in-process only dependencies (token store, guarded fetch);
  *    never reachable by the renderer.
+ *  - `deps.jira`: the whitelisted Jira client (built over the guarded fetch); routes answer 503 without it.
  *  - `deps.stores`: `{ config, datasets }` persistence, built from the encrypted SQLite cache.
  *  - `deps.guards`: extra request guards run after the secret check. A guard returns `null` to continue, or a `{ status, body }` result to short-circuit.
  *  - `deps.registerRoutes`: extra route modules from `proxy/routes/`.
@@ -110,6 +114,7 @@ export function createProxyServer(deps) {
     version: deps.version ?? readPackageVersion(),
     secrets: deps.secrets,
     fetch: deps.fetch,
+    jira: deps.jira,
     stores: deps.stores ?? {},
   };
   const guards = [secretGuard, ...(deps.guards ?? [])];
@@ -118,6 +123,8 @@ export function createProxyServer(deps) {
   registerHealthRoutes(router);
   registerSecretRoutes(router);
   registerConfigRoutes(router);
+  registerConnectionRoutes(router);
+  registerJiraMetaRoutes(router);
   for (const register of deps.registerRoutes ?? []) register(router);
 
   /**

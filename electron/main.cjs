@@ -86,12 +86,20 @@ async function startProxy(secrets) {
   const { openDatabase } = await load('cache/db.mjs');
   const { createConfigStore } = await load('config/store.mjs');
   const { createJiraEndpoint } = await load('config/jira-endpoint.mjs');
+  const { createJiraClient } = await load('jira/client.mjs');
   // The database opens without the key; a key that cannot decrypt it surfaces lazily as
   // DATA_KEY_INVALID on the config/dataset routes (and nothing is overwritten).
   const handle = openDatabase({ path: getDbPath() });
   dbHandle = handle;
   const configStore = createConfigStore({ handle, getDataKey: () => secrets.getDataKey() });
   jiraEndpoint = createJiraEndpoint(configStore);
+  // One guarded fetch for every outbound call: the Jira client never sees the global fetch.
+  const guardedFetch = createGuardedFetch({ fetchImpl: globalThis.fetch, getAllowedHosts });
+  const jira = createJiraClient({
+    getConfig: () => configStore.load(),
+    secrets,
+    fetchImpl: guardedFetch,
+  });
   const port = await findAvailablePort(PROXY_PORT_RANGE_START);
   proxyServer = await startProxyServer({
     port,
@@ -101,7 +109,8 @@ async function startProxy(secrets) {
     allowedOrigins: getAllowedOrigins({ dev: isDevMode() }),
     secrets,
     stores: { config: configStore },
-    fetch: createGuardedFetch({ fetchImpl: globalThis.fetch, getAllowedHosts }),
+    fetch: guardedFetch,
+    jira,
   });
 }
 
