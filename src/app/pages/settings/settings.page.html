@@ -1,0 +1,114 @@
+<header class="page-header">
+  <h1>Configuración general</h1>
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+}
+
+@if (settings()) {
+  <section class="card">
+    <h2>Días hábiles</h2>
+    <p class="field-hint">
+      Definen cuándo una unidad de trabajo se marca como estancada o envejecida. Se cuentan solo los días hábiles.
+    </p>
+    <div class="field">
+      <label for="stale-days">Estancada: días hábiles sin cambiar de estado</label>
+      <input
+        id="stale-days"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        max="365"
+        step="1"
+        [value]="staleDays()"
+        [attr.aria-invalid]="staleError() ? 'true' : null"
+        (input)="staleDays.set($any($event.target).value)"
+      />
+      @if (staleError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+    <div class="field">
+      <label for="aging-days">Envejecida: días hábiles en curso</label>
+      <input
+        id="aging-days"
+        type="number"
+        inputmode="numeric"
+        min="1"
+        max="365"
+        step="1"
+        [value]="agingDays()"
+        [attr.aria-invalid]="agingError() ? 'true' : null"
+        (input)="agingDays.set($any($event.target).value)"
+      />
+      @if (agingError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+    <div class="card-foot">
+      <button type="button" [disabled]="savingDays()" (click)="saveDays()">Guardar días</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Mapeo de estados</h2>
+    <p class="field-hint">
+      La categoría de cada estado (por hacer, en curso, hecho) se edita en Conexión, en un único lugar.
+    </p>
+    <p>
+      @if (overrideCount() === 0) {
+        Ningún estado tiene la categoría ajustada.
+      } @else {
+        <span class="text-mono">{{ overrideCount() }}</span>
+        {{ overrideCount() === 1 ? 'estado tiene' : 'estados tienen' }} la categoría ajustada.
+      }
+    </p>
+    <p><a routerLink="/connection">Editar en Conexión</a></p>
+  </section>
+
+  <section class="card">
+    <h2>Informes con IA</h2>
+    <label class="choice" for="ai-enabled">
+      <input
+        id="ai-enabled"
+        type="checkbox"
+        role="switch"
+        [checked]="settings()?.ai?.enabled"
+        [disabled]="savingAi()"
+        (change)="setAiEnabled($any($event.target).checked)"
+      />
+      Activar informes con IA
+    </label>
+    <div class="field">
+      <label for="ai-key">{{ aiKeyStored() ? 'Reemplazar API key' : 'Cargá la API key' }}</label>
+      <input
+        id="ai-key"
+        type="password"
+        autocomplete="off"
+        [placeholder]="aiKeyStored() ? 'Dejalo vacío para conservar la actual' : ''"
+        [value]="aiKey()"
+        (input)="aiKey.set($any($event.target).value)"
+      />
+      @if (aiKeyStored()) {
+        <span class="field-hint">Hay una API key guardada. Escribí una nueva solo para reemplazarla.</span>
+      } @else {
+        <span class="field-hint">Se guarda cifrada y no se puede volver a ver.</span>
+      }
+      @if (aiKeyError(); as message) {
+        <span class="field-error" role="alert">{{ message }}</span>
+      }
+    </div>
+    @if (needsKey()) {
+      <p class="field-hint" role="status">Los informes con IA necesitan la API key: cargala para poder generarlos.</p>
+    }
+    <div class="card-foot">
+      <button type="button" [disabled]="!aiKey().trim() || savingKey()" (click)="saveKey()">Guardar API key</button>
+    </div>
+  </section>
+} @else if (configState().status !== 'error') {
+  <p class="field-hint">Cargando…</p>
+}

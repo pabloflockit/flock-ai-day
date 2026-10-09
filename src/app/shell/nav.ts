@@ -18,6 +18,8 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     items: [
       { label: 'Conexión', path: '/connection', icon: 'link' },
       { label: 'Equipos', path: '/teams', icon: 'team' },
+      { label: 'Sincronización', path: '/sync', icon: 'sync' },
+      { label: 'Configuración', path: '/settings', icon: 'sliders' },
       { label: 'Diagnóstico', path: '/diagnostics', icon: 'shield-check' },
     ],
   },

@@ -25,5 +25,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/projects/project-detail.page').then((m) => m.ProjectDetailPage),
   },
+  {
+    path: 'sync',
+    loadComponent: () => import('./pages/sync/sync.page').then((m) => m.SyncPage),
+  },
+  {
+    path: 'settings',
+    loadComponent: () => import('./pages/settings/settings.page').then((m) => m.SettingsPage),
+  },
   { path: '**', redirectTo: 'connection' },
 ];

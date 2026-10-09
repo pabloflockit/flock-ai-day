@@ -130,3 +130,24 @@ test('a failed epic is reported through shardsMeta, not as an error', async () =
     assert.deepEqual(res.body.data.rows, []);
   });
 });
+
+test('GET /api/datasets/:source/meta answers the envelope without rows', async () => {
+  const { configStore, datasets } = build();
+  configStore.save(makeConfig({ epics: ['E-1'] }));
+  await withProxy({ config: configStore, datasets }, async (call) => {
+    const empty = await call('GET', '/api/datasets/projectIssues/meta?scopeId=p1');
+    assert.equal(empty.status, 200);
+    assert.deepEqual(empty.body.data, { fetchedAt: null, isCurrent: false, shardsMeta: [] });
+
+    await call('POST', '/api/datasets/projectIssues/refresh?scopeId=p1&mode=full');
+    const meta = await call('GET', '/api/datasets/projectIssues/meta?scopeId=p1');
+    assert.equal(meta.status, 200);
+    assert.equal(meta.body.data.fetchedAt, T0);
+    assert.equal(meta.body.data.isCurrent, true);
+    assert.deepEqual(meta.body.data.shardsMeta.map((m) => [m.key, m.status]), [['E-1', 'ok']]);
+    assert.equal('rows' in meta.body.data, false);
+
+    assert.equal((await call('GET', '/api/datasets/projectIssues/meta')).status, 400);
+    assert.equal((await call('GET', '/api/datasets/nope/meta?scopeId=p1')).status, 404);
+  });
+});

@@ -187,3 +187,19 @@ test('setJiraParticularities sets link mode, field and overrides; epic_link need
     ['EPIC_LINK_MODE_INVALID'],
   );
 });
+
+test('setGeneralSettings sets business days and AI; days must be whole numbers from 1 to 365', () => {
+  const config = ok(edit.setGeneralSettings(base(), { staleBusinessDays: 3, agingBusinessDays: 15, aiEnabled: true }));
+  assert.equal(config.settings.staleBusinessDays, 3);
+  assert.equal(config.settings.agingBusinessDays, 15);
+  assert.equal(config.settings.ai.enabled, true);
+  assert.equal(config.settings.fullRefreshMaxAgeHours, base().settings.fullRefreshMaxAgeHours);
+
+  assert.deepEqual(
+    codes(edit.setGeneralSettings(base(), { staleBusinessDays: 0, agingBusinessDays: 2.5, aiEnabled: false })),
+    ['SETTINGS_DAYS_INVALID', 'SETTINGS_DAYS_INVALID'],
+  );
+  const issue = edit.setGeneralSettings(base(), { staleBusinessDays: 5, agingBusinessDays: 366, aiEnabled: false });
+  assert.equal(issue.ok, false);
+  assert.equal(issue.issues[0].path, 'settings.agingBusinessDays');
+});

@@ -31,6 +31,7 @@ function requireScopeId(query) {
 
 /**
  * `GET  /api/datasets/:source?scopeId=`                      -> `{ rows, fetchedAt, isCurrent, shardsMeta }`
+ * `GET  /api/datasets/:source/meta?scopeId=`                 -> the same without `rows` (admin screens).
  * `POST /api/datasets/:source/refresh?scopeId=&mode=delta|full` -> same shape, after refreshing.
  *
  * Never fetched: 200 with `rows: []` and `fetchedAt: null` (not an error: the front hydrates and
@@ -44,6 +45,15 @@ export function registerDatasetRoutes(router) {
     const scopeId = requireScopeId(query);
     const service = requireDatasets(deps);
     return params.source === 'epicIssues' ? service.readEpic(scopeId) : service.read(scopeId);
+  });
+
+  router.add('GET', '/api/datasets/:source/meta', ({ params, query, deps }) => {
+    requireSource(params?.source);
+    const scopeId = requireScopeId(query);
+    const service = requireDatasets(deps);
+    const { fetchedAt, isCurrent, shardsMeta } =
+      params.source === 'epicIssues' ? service.readEpic(scopeId) : service.read(scopeId);
+    return { fetchedAt, isCurrent, shardsMeta };
   });
 
   router.add('POST', '/api/datasets/:source/refresh', ({ params, query, deps }) => {

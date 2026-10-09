@@ -1,0 +1,74 @@
+// Sync page — Flock Design System tokens only (docs/design/design-system.md).
+:host {
+  display: block;
+  max-width: 60rem;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-block-end: var(--space-5);
+
+  h2,
+  h3,
+  p {
+    margin: 0;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.run-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  margin: 0;
+
+  dt {
+    font-size: var(--fs-caption);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-label);
+  }
+
+  dd {
+    margin: 0;
+    color: var(--text-strong);
+  }
+}
+
+.progress-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--fs-control);
+}
+
+.failed-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-3);
+  }
+}

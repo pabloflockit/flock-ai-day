@@ -563,3 +563,26 @@ button.toast-close {
     accent-color: var(--brand);
   }
 }
+
+// ---- Progress bar (sync progress): track + fill; width comes from the component ------------
+.progress {
+  height: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+
+  .progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--state-progress-bar);
+    transition: width 0.3s ease;
+  }
+
+  &.is-failing .progress-fill {
+    background: var(--state-blocked-bar);
+  }
+
+  &.is-done .progress-fill {
+    background: var(--state-done-bar);
+  }
+}

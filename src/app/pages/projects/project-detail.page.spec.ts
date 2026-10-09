@@ -43,7 +43,6 @@ const FIELDS = [
 ];
 
 const SHARDS = {
-  rows: [],
   fetchedAt: '2026-03-02T15:30:00.000Z',
   isCurrent: true,
   shardsMeta: [
@@ -72,7 +71,7 @@ describe('ProjectDetailPage', () => {
         if (path === '/api/config') return Promise.resolve(stored);
         if (path === '/api/connection/status') return Promise.resolve({ tokenStored });
         if (path === '/api/jira/fields') return Promise.resolve(FIELDS);
-        if (path.startsWith('/api/datasets/projectIssues')) return (options.datasets ?? (() => Promise.resolve(SHARDS)))();
+        if (path.startsWith('/api/datasets/projectIssues/meta?scopeId=')) return (options.datasets ?? (() => Promise.resolve(SHARDS)))();
         if (path.startsWith('/api/jira/epics/')) {
           const key = decodeURIComponent(path.slice('/api/jira/epics/'.length));
           return (options.epicInfo ?? ((k: string) => Promise.resolve({ key: k, summary: `Nueva ${k}`, issueTypeId: '10001' })))(key);

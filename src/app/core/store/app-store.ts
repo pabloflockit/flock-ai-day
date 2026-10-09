@@ -50,9 +50,10 @@ export interface ViewState {
   scopeId: string | null;
 }
 
-/** Presence of the Jira token (`GET /api/connection/status`); `null` until known. */
+/** Presence of the Jira token and the AI key (`GET /api/connection/status`); `null` until known. */
 export interface ConnectionState {
   tokenStored: boolean | null;
+  aiKeyStored: boolean | null;
 }
 
 export interface AppState {
@@ -69,7 +70,7 @@ type DatasetView = Pick<DatasetState, 'rows' | 'fetchedAt' | 'isCurrent' | 'shar
 const initialState: AppState = {
   proxyHealth: { status: 'unknown', version: null, errorMessage: null },
   config: { status: 'idle', config: null, error: null },
-  connection: { tokenStored: null },
+  connection: { tokenStored: null, aiKeyStored: null },
   datasets: {},
   sync: { status: 'idle' },
   view: { scopeId: null },
@@ -108,6 +109,7 @@ export class AppStore {
   readonly config = computed(() => this.#state().config.config);
   readonly datasets = computed(() => this.#state().datasets);
   readonly tokenStored = computed(() => this.#state().connection.tokenStored);
+  readonly aiKeyStored = computed(() => this.#state().connection.aiKeyStored);
   /** URL, email and token are saved: Jira calls can be made (or tested). */
   readonly jiraReady = computed(() => {
     const jira = this.config()?.jira;
@@ -149,20 +151,45 @@ export class AppStore {
     }
   }
 
-  /** Reads whether a Jira token is stored. On failure the presence stays unknown (`null`). */
+  /**
+   * Always re-reads `GET /api/config` (a sync run merges Jira-maintained fields into it). The
+   * current config stays visible while it loads; a failure keeps it and never throws, and only
+   * shows as an error when there was nothing to keep.
+   */
+  async reloadConfig(): Promise<void> {
+    const previous = this.#state().config;
+    if (previous.status === 'loading') return;
+    if (previous.status !== 'ready') this.#setConfig({ status: 'loading', config: null, error: null });
+    try {
+      const config = await this.#proxy.get<AppConfig>('/api/config');
+      this.#setConfig({ status: 'ready', config, error: null });
+    } catch (error) {
+      if (previous.status !== 'ready') this.#setConfig({ status: 'error', config: null, error: toStoreError(error) });
+    }
+  }
+
+  /** Reads whether a Jira token and an AI key are stored. On failure the presence stays unknown (`null`). */
   async loadConnectionStatus(): Promise<void> {
     try {
-      const { tokenStored } = await this.#proxy.get<{ tokenStored: boolean }>('/api/connection/status');
-      this.#state.update((s) => ({ ...s, connection: { tokenStored } }));
+      const { tokenStored, aiKeyStored } = await this.#proxy.get<{ tokenStored: boolean; aiKeyStored: boolean }>(
+        '/api/connection/status',
+      );
+      this.#state.update((s) => ({ ...s, connection: { tokenStored, aiKeyStored } }));
     } catch {
-      this.#state.update((s) => ({ ...s, connection: { tokenStored: null } }));
+      this.#state.update((s) => ({ ...s, connection: { tokenStored: null, aiKeyStored: null } }));
     }
   }
 
   /** `PUT /api/connection/token` (write-only); the value is never kept in the renderer. */
   async saveJiraToken(token: string): Promise<void> {
     await this.#proxy.put('/api/connection/token', { token });
-    this.#state.update((s) => ({ ...s, connection: { tokenStored: true } }));
+    this.#state.update((s) => ({ ...s, connection: { ...s.connection, tokenStored: true } }));
+  }
+
+  /** `PUT /api/ai/key` (write-only); the value is never kept in the renderer. */
+  async saveAiKey(key: string): Promise<void> {
+    await this.#proxy.put('/api/ai/key', { key });
+    this.#state.update((s) => ({ ...s, connection: { ...s.connection, aiKeyStored: true } }));
   }
 
   /**

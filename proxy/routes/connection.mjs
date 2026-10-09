@@ -36,8 +36,9 @@ export function registerConnectionRoutes(router) {
     if (!deps.secrets) {
       throw new ApiError(503, ERROR_CODES.SECRETS_UNAVAILABLE, 'Secret storage is not available.');
     }
-    const token = deps.secrets.getJiraToken();
-    return { tokenStored: typeof token === 'string' && token !== '' };
+    /** @param {unknown} value */
+    const present = (value) => typeof value === 'string' && value !== '';
+    return { tokenStored: present(deps.secrets.getJiraToken()), aiKeyStored: present(deps.secrets.getAiKey()) };
   });
 
   router.add('POST', '/api/connection/test', async ({ deps }) => {

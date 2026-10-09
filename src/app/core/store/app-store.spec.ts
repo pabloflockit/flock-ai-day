@@ -1,5 +1,6 @@
 import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { normalizeConfig } from '../../../../proxy/config/normalize.mjs';
 import { resolveTarget } from '../../../../shared/cache-key.mjs';
 import { ProxyClient, ProxyError } from '../proxy-client';
 import { AppStore } from './app-store';
@@ -122,5 +123,107 @@ describe('AppStore dataset hydration', () => {
     await store.refreshDataset('epicIssues', epic, params);
     expect(store.datasets()[cacheKey].status).toBe('error');
     expect(store.datasets()[cacheKey].rows.length).toBe(1);
+  });
+});
+
+describe('AppStore connection status', () => {
+  function setup(proxy: Partial<Record<'get' | 'put', jasmine.Spy>>) {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: proxy }],
+    });
+    return TestBed.inject(AppStore);
+  }
+
+  it('keeps both the Jira token and the AI key presence, unknown until read', async () => {
+    const get = jasmine.createSpy('get').and.resolveTo({ tokenStored: true, aiKeyStored: false });
+    const store = setup({ get });
+    expect(store.aiKeyStored()).toBeNull();
+
+    await store.loadConnectionStatus();
+    expect(store.tokenStored()).toBeTrue();
+    expect(store.aiKeyStored()).toBeFalse();
+  });
+
+  it('falls back to unknown when the status cannot be read', async () => {
+    const store = setup({ get: jasmine.createSpy('get').and.rejectWith(new ProxyError('TRANSPORT_ERROR', 'down')) });
+    await store.loadConnectionStatus();
+    expect(store.tokenStored()).toBeNull();
+    expect(store.aiKeyStored()).toBeNull();
+  });
+
+  it('saveAiKey sends the key once and marks it stored without keeping it', async () => {
+    const put = jasmine.createSpy('put').and.resolveTo({ stored: true });
+    const get = jasmine.createSpy('get').and.resolveTo({ tokenStored: true, aiKeyStored: false });
+    const store = setup({ get, put });
+    await store.loadConnectionStatus();
+
+    await store.saveAiKey('sk-secret');
+    expect(put).toHaveBeenCalledWith('/api/ai/key', { key: 'sk-secret' });
+    expect(store.aiKeyStored()).toBeTrue();
+    expect(store.tokenStored()).toBeTrue();
+    expect(JSON.stringify(store.configState())).not.toContain('sk-secret');
+  });
+
+  it('a failed saveAiKey rejects and leaves the presence untouched', async () => {
+    const put = jasmine.createSpy('put').and.rejectWith(new ProxyError('VALIDATION_ERROR', 'no'));
+    const get = jasmine.createSpy('get').and.resolveTo({ tokenStored: false, aiKeyStored: false });
+    const store = setup({ get, put });
+    await store.loadConnectionStatus();
+    await expectAsync(store.saveAiKey('x')).toBeRejected();
+    expect(store.aiKeyStored()).toBeFalse();
+  });
+
+  it('saveJiraToken keeps the AI key presence', async () => {
+    const put = jasmine.createSpy('put').and.resolveTo({ stored: true });
+    const get = jasmine.createSpy('get').and.resolveTo({ tokenStored: false, aiKeyStored: true });
+    const store = setup({ get, put });
+    await store.loadConnectionStatus();
+    await store.saveJiraToken('t');
+    expect(store.tokenStored()).toBeTrue();
+    expect(store.aiKeyStored()).toBeTrue();
+  });
+});
+
+describe('AppStore reloadConfig', () => {
+  const cfg = (name: string) => normalizeConfig({ teams: [{ id: 't1', name, active: true, members: [] }] });
+  function setup(get: jasmine.Spy) {
+    TestBed.configureTestingModule({
+      providers: [provideZonelessChangeDetection(), { provide: ProxyClient, useValue: { get } }],
+    });
+    return TestBed.inject(AppStore);
+  }
+
+  it('re-reads the config, keeping the current one visible while it loads', async () => {
+    let resolveSecond!: (v: unknown) => void;
+    const get = jasmine
+      .createSpy('get')
+      .and.returnValues(Promise.resolve(cfg('Old')), new Promise((r) => (resolveSecond = r)));
+    const store = setup(get);
+    await store.loadConfig();
+
+    const reload = store.reloadConfig();
+    expect(store.config()?.teams[0].name).toBe('Old');
+    expect(store.configState().status).toBe('ready');
+    resolveSecond(cfg('New'));
+    await reload;
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(store.config()?.teams[0].name).toBe('New');
+  });
+
+  it('keeps the previous config and does not throw when the reload fails', async () => {
+    const get = jasmine
+      .createSpy('get')
+      .and.returnValues(Promise.resolve(cfg('Old')), Promise.reject(new ProxyError('TRANSPORT_ERROR', 'down')));
+    const store = setup(get);
+    await store.loadConfig();
+    await expectAsync(store.reloadConfig()).toBeResolved();
+    expect(store.configState().status).toBe('ready');
+    expect(store.config()?.teams[0].name).toBe('Old');
+  });
+
+  it('surfaces the error only when there was no previous config', async () => {
+    const store = setup(jasmine.createSpy('get').and.rejectWith(new ProxyError('TRANSPORT_ERROR', 'down')));
+    await store.reloadConfig();
+    expect(store.configState().status).toBe('error');
   });
 });

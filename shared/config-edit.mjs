@@ -356,3 +356,34 @@ export function setJiraParticularities(config, p) {
     draft.jira.statusCategoryOverrides = overrides;
   });
 }
+
+// ---- General settings (plan §6.1.6) -----------------------------------------------------------
+
+const MAX_BUSINESS_DAYS = 365;
+
+/**
+ * Business days for stale and aging work, and whether AI reports are enabled (the key itself is
+ * write-only, `PUT /api/ai/key`). `fullRefreshMaxAgeHours` is not edited here.
+ * @param {AppConfig} config
+ * @param {{ staleBusinessDays: number, agingBusinessDays: number, aiEnabled: boolean }} s
+ */
+export function setGeneralSettings(config, s) {
+  /** @type {EditIssue[]} */
+  const issues = [];
+  for (const field of /** @type {const} */ (['staleBusinessDays', 'agingBusinessDays'])) {
+    const value = s[field];
+    if (!Number.isInteger(value) || value < 1 || value > MAX_BUSINESS_DAYS) {
+      issues.push({
+        code: 'SETTINGS_DAYS_INVALID',
+        path: `settings.${field}`,
+        message: `Ingresá una cantidad entera de días hábiles entre 1 y ${MAX_BUSINESS_DAYS}.`,
+      });
+    }
+  }
+  if (issues.length > 0) return /** @type {EditResult} */ ({ ok: false, issues });
+  return apply(config, (draft) => {
+    draft.settings.staleBusinessDays = s.staleBusinessDays;
+    draft.settings.agingBusinessDays = s.agingBusinessDays;
+    draft.settings.ai.enabled = s.aiEnabled === true;
+  });
+}

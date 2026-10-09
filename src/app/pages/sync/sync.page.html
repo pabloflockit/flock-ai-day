@@ -1,0 +1,150 @@
+<header class="page-header">
+  <h1>Sincronización</h1>
+</header>
+
+@if (configState().status === 'error') {
+  <p class="field-error" role="alert">
+    No se pudo cargar la configuración: {{ configState().error?.message }} (código:
+    {{ configState().error?.code }})
+  </p>
+}
+
+<section class="card">
+  <h2>Actualizar datos</h2>
+  <p class="field-hint">
+    «Sincronizar ahora» trae solo lo que cambió. «Carga completa» vuelve a descargar todo desde Jira.
+  </p>
+  <div class="actions">
+    <button type="button" [disabled]="!canStart()" (click)="start('delta')">Sincronizar ahora</button>
+    <button type="button" class="btn-ghost" [disabled]="!canStart()" (click)="start('full')">Carga completa</button>
+    @if (running()) {
+      <span class="field-hint" role="status">Sincronizando…</span>
+    }
+  </div>
+  @if (!jiraReady()) {
+    <p class="field-hint">
+      Para sincronizar primero completá la conexión con Jira en <a routerLink="/connection">Conexión</a>.
+    </p>
+  }
+  @if (startError(); as message) {
+    <p class="field-error" role="alert">{{ message }}</p>
+  }
+  @if (statusError(); as message) {
+    <p class="field-error" role="alert">No se pudo leer el estado de la sincronización: {{ message }}</p>
+  }
+</section>
+
+@if (status(); as run) {
+  @if (run.state !== 'idle') {
+    <section class="card">
+      <h2>{{ run.state === 'running' ? 'Sincronización en curso' : 'Última sincronización' }}</h2>
+      <dl class="run-meta">
+        <div>
+          <dt>Tipo</dt>
+          <dd>{{ modeLabel(run.mode) }}</dd>
+        </div>
+        <div>
+          <dt>Inicio</dt>
+          <dd class="text-mono">{{ formatDate(run.startedAt) }}</dd>
+        </div>
+        <div>
+          <dt>Fin</dt>
+          <dd class="text-mono">{{ formatDate(run.finishedAt) }}</dd>
+        </div>
+      </dl>
+
+      @for (item of [{ label: 'Proyectos', counter: run.projects }, { label: 'Integrantes', counter: run.members }]; track item.label) {
+        <div class="progress-row">
+          <div class="progress-head">
+            <span>{{ item.label }}</span>
+            <span class="text-mono">
+              {{ processed(item.counter) }} de {{ item.counter.total }}@if (item.counter.failed > 0) {<span class="field-error"> ({{ item.counter.failed }} con error)</span>}
+            </span>
+          </div>
+          <div
+            class="progress"
+            [class.is-failing]="item.counter.failed > 0"
+            [class.is-done]="run.state === 'done' && item.counter.failed === 0"
+            role="progressbar"
+            [attr.aria-label]="item.label"
+            aria-valuemin="0"
+            [attr.aria-valuemax]="item.counter.total"
+            [attr.aria-valuenow]="processed(item.counter)"
+          >
+            <div class="progress-fill" [style.width.%]="percent(item.counter)"></div>
+          </div>
+        </div>
+      }
+
+      @if (run.error; as error) {
+        <p class="field-error" role="alert">La sincronización falló: {{ errorMessage(error.code) }}</p>
+      }
+
+      @if (run.failedEpics.length > 0) {
+        <h3>Épicas que fallaron</h3>
+        <ul class="failed-list">
+          @for (epic of run.failedEpics; track epic.projectId + epic.key) {
+            <li>
+              <span class="text-mono">{{ epic.key }}</span>
+              <span class="field-hint">{{ projectName(epic.projectId) }}</span>
+              <span class="field-error">{{ errorMessage(epic.errorCode) }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+}
+
+<section class="card">
+  <h2>Datos por proyecto</h2>
+  @if (projects().length === 0) {
+    <p class="field-hint">No hay proyectos activos en equipos activos.</p>
+  } @else {
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Equipo</th>
+            <th>Proyecto</th>
+            <th>Datos al</th>
+            <th>Estado</th>
+            <th>Épicas con error</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (project of projects(); track project.id) {
+            @let meta = metas()[project.id];
+            <tr>
+              <td>{{ project.teamName }}</td>
+              <td>
+                <a [routerLink]="['/projects', project.id]">{{ project.name }}</a>
+              </td>
+              @if (meta?.status === 'ok' && meta.data; as data) {
+                <td class="text-mono">{{ data.fetchedAt ? formatDate(data.fetchedAt) : 'Sin datos' }}</td>
+                <td>
+                  <span class="status-chip" [class.state-done]="data.isCurrent" [class.state-pending]="!data.isCurrent">
+                    {{ data.isCurrent ? 'Al día' : 'Desactualizado' }}
+                  </span>
+                </td>
+                <td>
+                  @for (shard of failedShards(data); track shard.key) {
+                    <div>
+                      <span class="text-mono">{{ shard.key }}:</span>&ngsp;<span class="field-error">{{ errorMessage(shard.errorCode ?? null) }}</span>
+                    </div>
+                  } @empty {
+                    —
+                  }
+                </td>
+              } @else if (meta?.status === 'error') {
+                <td colspan="3" class="field-hint">Sin datos de sincronización</td>
+              } @else {
+                <td colspan="3" class="field-hint">Cargando…</td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</section>

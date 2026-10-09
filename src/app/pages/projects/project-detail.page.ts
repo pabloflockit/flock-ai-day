@@ -328,7 +328,7 @@ export class ProjectDetailPage {
     const target = signal<Op<ProjectDataset>>(idle());
     this.dataset.set({ status: 'loading', data: null, error: null });
     await track(target, () =>
-      this.#proxy.get<ProjectDataset>(`/api/datasets/projectIssues?scopeId=${encodeURIComponent(projectId)}`),
+      this.#proxy.get<ProjectDataset>(`/api/datasets/projectIssues/meta?scopeId=${encodeURIComponent(projectId)}`),
     );
     // A newer load (another project) or a destroyed page makes this answer stale.
     if (load === this.#datasetLoad && !this.#destroyed) this.dataset.set(target());
