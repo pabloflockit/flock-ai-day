@@ -29,8 +29,8 @@ work not assigned to the team appears only in its own section; statuses and char
 ## Tasks
 
 - [x] 1. `work-units` domain — test-first, the four measurement steps in plan order.
-- [ ] 2. `teamScope` / `teamOutside` domain — test-first.
-- [ ] 3. Metrics M1–M6 and F1–F2 domain — test-first.
+- [x] 2. `teamScope` / `teamOutside` domain — test-first.
+- [x] 3. Metrics M1–M6 and F1–F2 domain — test-first.
 - [ ] 4. Dashboard data — store loads `projectIssues` for the team's active projects; team -> project -> epic view state; route and nav.
 - [ ] 5. Dashboard UI — header, M1–M6 cards/charts with system status colors, drill-down lists with `openInJira`, tasks-without-subtasks notice.
 - [ ] 6. "Fuera del equipo" — F1–F2 with the same filters, header counter, "Agregar al equipo" opening the preloaded member search.
@@ -42,3 +42,12 @@ work not assigned to the team appears only in its own section; statuses and char
   `{ units, tasksWithoutSubtasks }`; `test/domain-work-units.test.mjs` 11/11; node suite 441/441. RED observed for
   step 1 (module missing) and steps 3–4 (3 failing subtask/both tests); step 2 had no genuine RED (helper written
   early) — mutation check (forced `measureValue = 1`) made 2 tests fail. Commit: `feat(domain): add work units`.
+- Task 2 (worker, test-first): `shared/domain/scope.mjs` `teamScope` / `teamOutside`; `test/domain-scope.test.mjs`
+  5/5, RED observed (module missing). Covers a member in two teams and inactive members going to `others`.
+  Commit: `feat(domain): add team scope and outside`.
+- Task 3 (worker, test-first): `shared/domain/metrics.mjs` (`aggregate`, `measurementGroups`, M1 `progress`,
+  M2 `statusDistribution`, M3 `workInProgress`, M4 `loadByMember`, M5 `staleUnits`, M6 `weeklyThroughput` with
+  `hasDoneData`, F1 `unassignedOpen`, F2 `othersOpenByPerson`); `test/domain-metrics.test.mjs` 11/11, RED observed;
+  node suite 457/457. Decisions: `progress` sums the units it receives (scope filtering is `teamScope`'s job) and
+  lists only active epics with units; buckets are `{ count, measure, missingMeasure, units }` for drill-down.
+  Commit: `feat(domain): add dashboard metrics`.
